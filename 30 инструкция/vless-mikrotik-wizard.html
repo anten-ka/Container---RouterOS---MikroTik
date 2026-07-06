@@ -295,10 +295,10 @@
       <summary>Запасной образ (если Docker Hub недоступен из вашей сети)</summary>
       <p class="hint" style="margin-top:10px">Скрипт сначала до 3 раз пробует скачать контейнер с Docker Hub. Если не вышло — поставит его из готового файла <code>.tar</code>, интернет к Docker больше не нужен. Образ ищется по порядку: <b>файл рядом со скриптом</b> → <b>скачивание по ссылке</b> → <b>сборка через podman/docker на ПК</b> (если установлены). Ничего заполнять не обязательно — по умолчанию скрипт ищет файл <code>vless-container-&lt;архитектура&gt;.tar</code> рядом с собой.</p>
       <div class="fields">
-        <div class="full"><label>Ссылка на .tar образа (по желанию — ваше облако/GitHub)</label><input type="text" id="tarUrl" placeholder="https://github.com/USER/REPO/releases/download/v1/vless-container-{arch}.tar" autocomplete="off"></div>
+        <div class="full"><label>Ссылка на .tar образа (по умолчанию — резервный образ на GitHub автора)</label><input type="text" id="tarUrl" value="https://raw.githubusercontent.com/anten-ka/Container---RouterOS---MikroTik/main/30%20%D0%B8%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BA%D1%86%D0%B8%D1%8F/container-images/vless-container-{arch}.tar" autocomplete="off"></div>
         <div class="full"><label>Имя файла образа рядом со скриптом (если отличается от стандартного)</label><input type="text" id="tarName" placeholder="vless-container-arm64.tar" autocomplete="off"></div>
       </div>
-      <p class="hint" style="margin:2px 0 0"><b>Подсказка:</b> в ссылке можно написать <code>{arch}</code> — установщик сам подставит архитектуру роутера (<code>arm64</code>, <code>arm</code> или <code>x86_64</code>). Тогда <b>одна ссылка</b> подойдёт для всех моделей. Файлы образов (arm64/arm/x86_64) уже готовы — их дал вам ассистент.</p>
+      <p class="hint" style="margin:2px 0 0"><b>Резерв уже настроен:</b> в поле выше — готовая ссылка на образ на GitHub автора (с плейсхолдером <code>{arch}</code> — установщик сам подставит <code>arm64</code>, <code>arm</code> или <code>x86_64</code>). Если Docker Hub недоступен, образ скачается отсюда автоматически. Можно заменить на свою ссылку или очистить.</p>
       <details style="margin-top:8px">
         <summary style="font-size:0.81rem">Как подготовить .tar (один раз, на ПК с podman/docker или на зарубежном VPS)</summary>
         <pre style="max-height:none;margin-top:8px"># arm64 — hAP ax², ax³ и большинство новых
