@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мастер настройки MikroTik + VLESS (контейнер sing-box)</title>
+<style>
+  :root{
+    --bg:#0f1420; --card:#1a2233; --card2:#141b2b; --text:#e8ecf4; --muted:#8b96ad;
+    --accent:#4f8cff; --ok:#3ecf8e; --warn:#ffb454; --err:#ff6b6b; --border:#2a3550;
+  }
+  *{box-sizing:border-box}
+  html{font-size:16px}
+  body{margin:0;padding:24px 16px 80px;background:var(--bg);color:var(--text);
+    font:0.94rem/1.55 -apple-system,"Segoe UI",Roboto,Ubuntu,sans-serif}
+  /* адаптивная ширина: на широких мониторах страница шире, на ноутбуках компактнее */
+  .wrap{max-width:clamp(680px, 78vw, 1280px);margin:0 auto}
+  h1{font-size:1.4rem;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 24px;font-size:0.88rem}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+  .step{display:flex;gap:12px;align-items:baseline;margin-bottom:12px}
+  .num{background:var(--accent);color:#fff;border-radius:50%;min-width:1.65rem;height:1.65rem;
+    display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.88rem}
+  h2{font-size:1.06rem;margin:0}
+  h3{font-size:0.88rem;margin:14px 0 6px}
+  textarea,input[type=text],input[type=password]{width:100%;background:var(--card2);color:var(--text);
+    border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:0.81rem/1.5 ui-monospace,Consolas,monospace;outline:none}
+  textarea:focus,input:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:74px}
+  label.radio{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);
+    border-radius:8px;margin-bottom:8px;cursor:pointer}
+  label.radio:hover{border-color:var(--accent)}
+  label.radio input{margin-top:3px}
+  .radio b{display:block;font-size:0.88rem}
+  .radio span{color:var(--muted);font-size:0.81rem}
+  .hint{color:var(--muted);font-size:0.81rem;margin:6px 0 10px}
+  .msg{border-radius:8px;padding:8px 12px;font-size:0.81rem;margin-top:8px;display:none}
+  .msg.ok{display:block;background:rgba(62,207,142,.1);color:var(--ok);border:1px solid rgba(62,207,142,.35)}
+  .msg.warn{display:block;background:rgba(255,180,84,.1);color:var(--warn);border:1px solid rgba(255,180,84,.35)}
+  .msg.err{display:block;background:rgba(255,107,107,.1);color:var(--err);border:1px solid rgba(255,107,107,.35)}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .fields .full{grid-column:1/-1}
+  .fields label{font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px}
+  .keylist label.radio{margin-bottom:6px}
+  details{margin-top:8px}
+  summary{cursor:pointer;color:var(--accent);font-size:0.88rem}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:12px 22px;
+    font-size:0.94rem;font-weight:600;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  button.sec{background:var(--card2);border:1px solid var(--border);color:var(--text);font-weight:500;padding:9px 16px;font-size:0.81rem}
+  #out{display:none}
+  pre{background:#0b0f18;border:1px solid var(--border);border-radius:8px;padding:14px;
+    font:0.75rem/1.5 ui-monospace,Consolas,monospace;overflow:auto;max-height:420px;white-space:pre}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .prereq{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.3);border-radius:8px;
+    padding:12px 14px;font-size:0.81rem}
+  .prereq b{color:var(--warn)}
+  .intro{background:rgba(79,140,255,.07);border:1px solid rgba(79,140,255,.3);border-radius:8px;
+    padding:12px 14px;font-size:0.81rem;margin-bottom:12px}
+  .intro b{color:var(--accent)}
+  code{background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:0.75rem}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:2px;margin-top:8px}
+  label.chk{display:flex;gap:8px;align-items:center;font-size:0.81rem;padding:4px 6px;cursor:pointer;border-radius:6px}
+  label.chk:hover{background:var(--card2)}
+  .pbar{height:8px;background:var(--card2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:10px 0 6px}
+  #pfill{height:100%;width:0%;background:var(--accent);transition:width .25s}
+  ul.report{margin:8px 0;padding-left:20px;font-size:0.81rem}
+  ul.report li{margin:3px 0}
+  ol.proc{margin:8px 0;padding-left:20px;font-size:0.81rem;color:var(--muted)}
+  ol.proc li{margin:4px 0}
+  /* панель размера шрифта */
+  .fsbar{position:fixed;top:10px;right:12px;z-index:50;display:flex;gap:6px;align-items:center;
+    background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 8px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .fsbar button{background:var(--card2);border:1px solid var(--border);color:var(--text);font-weight:700;
+    padding:4px 10px;font-size:0.88rem;border-radius:6px;line-height:1.2}
+  .fsbar span{color:var(--muted);font-size:0.75rem;min-width:44px;text-align:center}
+  .oshint{color:var(--ok);font-size:0.81rem;margin:4px 0 8px}
+  @media(max-width:900px){.fsbar{position:static;margin:0 0 12px;width:max-content}}
+  @media(max-width:640px){.fields{grid-template-columns:1fr}.wrap{max-width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="fsbar" title="Размер шрифта страницы">
+    <button type="button" onclick="fontScale(-1)" aria-label="Уменьшить шрифт">A−</button>
+    <span id="fsVal">100%</span>
+    <button type="button" onclick="fontScale(1)" aria-label="Увеличить шрифт">A+</button>
+  </div>
+  <h1>Мастер настройки MikroTik + VLESS</h1>
+  <p class="sub">Контейнер sing-box (wiktorbgu) по инструкции №30. Ответьте на вопросы — получите готовый скрипт установки <b>в один клик или в одну вставку</b>.</p>
+
+  <!-- ПРОЛОГ -->
+  <div class="card">
+    <div class="step"><span class="num">ℹ</span><h2>Что это и как работает</h2></div>
+    <div class="intro">
+      <b>Этот файл</b> — автономный мастер настройки. Он работает целиком у вас в браузере: ничего никуда не отправляет
+      (в интернет ходит только за списками доменов с GitHub и за DNS-резолвингом, если вы сами это попросите на шаге «Маршрутизация»).
+      Пароли от роутера и Docker Hub страницу не покидают.
+    </div>
+    <p class="hint" style="margin-top:0">Как устроен процесс:</p>
+    <ol class="proc">
+      <li>Вы отвечаете на вопросы шагов 1–6 — мастер собирает под них скрипт настройки <code>vless-setup.rsc</code>.</li>
+      <li><b>Авто-режим:</b> дополнительно генерируется установщик под вашу систему — <code>setup.ps1</code> (Windows) или <code>setup.sh</code> (macOS/Linux). Он сам зайдёт на роутер по SSH, <b>определит модель и покажет её карточку с фотографией</b>, <b>сделает резервную копию и скачает её на ПК</b>, проверит все зависимости (версию RouterOS, архитектуру, пакет container, режим контейнеров, свободное место) и, только если всё в порядке, выполнит установку. Любая проблема — установка останавливается с объяснением.</li>
+      <li><b>Ручной режим:</b> вы получите готовые строки: сначала команды резервной копии, потом сам скрипт — вставить в терминал или выполнить через <code>/import</code>. Все проверки зависимостей встроены в начало скрипта — при проблеме он остановится и подскажет, что исправить.</li>
+      <li>Во время работы скрипт ведёт «прямой эфир»: пишет в консоль, что он сейчас делает и зачем это нужно.</li>
+      <li>В конце — отчёт: что настроено, что проверить, что делать, если что-то не так.</li>
+    </ol>
+    <details>
+      <summary>Что именно скрипт делает с роутером</summary>
+      <p class="hint" style="margin-top:8px">
+        Создаёт veth-интерфейс <code>172.18.20.5/30 ↔ 172.18.20.6</code> (виртуальный кабель к контейнеру), правила firewall
+        (MSS-клампинг, чтобы сайты не «подвисали», и NAT в туннель), переменные окружения из вашего ключа
+        <code>vless://</code>, скачивает и запускает контейнер <code>wiktorbgu/vless-sing-box-tunnel-mikrotik</code>.
+        Дальше — по вашему выбору: маршруты по списку, отдельная VPN-подсеть с DHCP и защитой от утечек (kill-switch),
+        отдельный Wi-Fi SSID. Всё создаваемое помечено комментариями <code>vless-…</code> — легко найти и удалить.
+        Скрипт можно запускать повторно: он не плодит дубликаты.<br>
+        Если Docker Hub недоступен (частая проблема в РФ), скрипт делает <b>3 попытки скачать</b> контейнер, а затем
+        ставит его из готового файла <code>.tar</code> — см. «Запасной образ» на шаге 6.
+      </p>
+    </details>
+    <div class="prereq" style="margin-top:12px">
+      <b>Два действия нельзя сделать скриптом издалека</b> (ограничение MikroTik, «физика»):<br>
+      1. Установка пакета <code>container-&lt;версия ROS&gt;-&lt;arm/arm64&gt;.npk</code> — авто-режим скачает и установит его сам, вам останется дождаться перезагрузки. hAP ax² — это <b>arm64</b>.<br>
+      2. <code>/system/device-mode/update container=yes</code> подтверждается <b>только выключением питания из розетки</b> (или кнопкой reset) — программный reboot не считается. Авто-режим попросит вас один раз дёрнуть питание в нужный момент.<br>
+      Скрипт проверяет оба пункта и не продолжает, пока они не выполнены.
+    </div>
+  </div>
+
+  <!-- ШАГ 1: КЛЮЧ -->
+  <div class="card">
+    <div class="step"><span class="num">1</span><h2>Ключ VLESS или подписка</h2></div>
+    <p class="hint">Вставьте ссылку <code>vless://…</code>, несколько ссылок или <b>содержимое подписки</b> (base64 — распознаю сам). Ключ берите тот, что создали для роутера (в каскадной схеме — ключ от первого сервера).</p>
+    <textarea id="keyInput" placeholder="vless://uuid@1.2.3.4:443?type=tcp&security=reality&pbk=...&fp=chrome&sni=yahoo.com&sid=...&flow=xtls-rprx-vision#MyServer"></textarea>
+    <div class="btnrow"><button class="sec" onclick="parseKeys()">Разобрать ключ</button></div>
+    <div id="keyMsg" class="msg"></div>
+    <div id="keyList" class="keylist"></div>
+    <div id="parsedBox" style="display:none">
+      <p class="hint" style="margin-top:14px">Проверьте, что разложилось из ключа (можно поправить):</p>
+      <div class="fields">
+        <div><label>Адрес сервера (REMOTE_ADDRESS)</label><input type="text" id="f_addr"></div>
+        <div><label>Порт (REMOTE_PORT)</label><input type="text" id="f_port"></div>
+        <div class="full"><label>UUID (ID)</label><input type="text" id="f_id"></div>
+        <div class="full"><label>Public key (PUBLIC_KEY = pbk)</label><input type="text" id="f_pbk"></div>
+        <div><label>SNI (SERVER_NAME)</label><input type="text" id="f_sni"></div>
+        <div><label>Short ID (SHORT_ID = sid)</label><input type="text" id="f_sid"></div>
+        <div><label>Flow</label><input type="text" id="f_flow"></div>
+        <div><label>Fingerprint</label><input type="text" id="f_fp"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ШАГ 2: СПОСОБ УСТАНОВКИ -->
+  <div class="card">
+    <div class="step"><span class="num">2</span><h2>Способ установки</h2></div>
+    <label class="radio"><input type="radio" name="imode" value="auto" checked>
+      <div><b>Авто через SSH — рекомендуется (Windows: setup.ps1, macOS/Linux: setup.sh)</b>
+      <span>Установщик сам зайдёт на роутер, определит модель и покажет карточку с её фотографией, сделает резервную копию и скачает её на ПК, проверит все зависимости, при необходимости сам установит пакет container и включит режим контейнеров (попросит один раз дёрнуть питание — удалённо это невозможно), зальёт и выполнит настройку с живым логом. При любом сбое — остановится и переключит на ручной режим с подсказками.</span></div></label>
+    <div id="connBox" class="fields" style="margin:4px 0 10px">
+      <div><label>IP роутера</label><input type="text" id="routerIp" value="192.168.88.1"></div>
+      <div><label>Логин</label><input type="text" id="routerUser" value="admin"></div>
+    </div>
+    <div id="backupBox" style="margin:0 0 6px">
+      <label class="chk"><input type="checkbox" id="chkBackup" checked> Перед изменениями сделать резервную копию (<code>.backup</code> + <code>/export</code>) и скачать её на ПК</label>
+    </div>
+    <div class="oshint" id="osHint"></div>
+    <p class="hint" id="connHint">Пароль в файл не сохраняется — его запросит консоль при первых 1–2 подключениях (безопаснее), дальше скрипт работает по временному SSH-ключу и сам удалит его в конце. Windows 10/11 — встроенный OpenSSH; macOS и Linux — ssh есть из коробки.</p>
+    <label class="radio"><input type="radio" name="imode" value="manual">
+      <div><b>Вручную</b>
+      <span>Получите готовые строки: сначала команды резервной копии, затем скрипт настройки — вставить в терминал WinBox или выполнить файлом через /import. Пакет container и device-mode нужно будет сделать руками заранее (скрипт проверит и подскажет).</span></div></label>
+  </div>
+
+  <!-- ШАГ 3: ПОДСЕТЬ -->
+  <div class="card">
+    <div class="step"><span class="num">3</span><h2>Как будем использовать VPN</h2></div>
+    <label class="radio"><input type="radio" name="netmode" value="existing" checked>
+      <div><b>В действующей сети</b>
+      <span>Ничего в устройстве сетей не меняется: все устройства остаются в вашей текущей сети, а через VPN пойдёт то, что вы выберете на шаге «Маршрутизация» (список сетей или весь трафик).</span></div></label>
+    <label class="radio"><input type="radio" name="netmode" value="new">
+      <div><b>Создать отдельную VPN-подсеть</b>
+      <span>Появится новая подсеть со своим DHCP: всё, что в неё попадает, ходит в интернет только через туннель. Защита от утечек (kill-switch): если туннель упал — в этой подсети интернета нет вовсе. Основная сеть продолжает работать напрямую, как раньше. Подключить к подсети можно отдельный Wi-Fi (шаг 5) и/или порты роутера.</span></div></label>
+    <div id="netBox" style="display:none">
+      <div class="fields" style="margin-top:4px">
+        <div><label>Подсеть VPN-сети (вида X.X.X.0/24)</label><input type="text" id="netSubnet" value="192.168.99.0/24"></div>
+      </div>
+      <p class="hint">Шлюзом будет адрес <code>.1</code>, DHCP раздаст <code>.10–.254</code>. Подсеть не должна пересекаться с основной (обычно 192.168.88.0/24).</p>
+    </div>
+  </div>
+
+  <!-- ШАГ 4: МАРШРУТИЗАЦИЯ -->
+  <div class="card">
+    <div class="step"><span class="num">4</span><h2>Маршрутизация</h2></div>
+    <div id="rmodeBox">
+      <label class="radio"><input type="radio" name="rmode" value="list" checked>
+        <div><b>Частичная — по списку подсетей (рекомендуется)</b>
+        <span>Через туннель пойдут только указанные сети, остальное — напрямую через провайдера.</span></div></label>
+      <label class="radio"><input type="radio" name="rmode" value="all">
+        <div><b>Весь трафик через туннель</b>
+        <span>Добавлю маршруты 0.0.0.0/1 + 128.0.0.0/1 и отдельный маршрут-исключение до вашего VPS через провайдера (иначе будет петля). Если контейнер ляжет — интернет за роутером пропадёт до его старта.</span></div></label>
+      <label class="radio"><input type="radio" name="rmode" value="none">
+        <div><b>Пока без маршрутов</b>
+        <span>Только контейнер и сеть. Маршруты добавите позже (шлюз 172.18.20.6) — например, собрав список здесь же и выполнив мини-скрипт.</span></div></label>
+    </div>
+    <div id="extraBox" style="display:none">
+      <p class="hint" style="margin-top:0">Вы создаёте отдельную VPN-подсеть — весь её трафик и так пойдёт через туннель, списки для неё не нужны.</p>
+      <label class="chk"><input type="checkbox" id="chkExtra"> Дополнительно направить через VPN список сетей и для <b>основной</b> сети (например, YouTube для всех устройств)</label>
+    </div>
+    <div id="listBox" style="padding:8px 0 0">
+      <p class="hint">Вставьте подсети — подойдёт вывод DomainMapper (raw/cidr или mikrotik-route), просто строки CIDR или вообще любой текст: выну все адреса вида <code>x.x.x.x/nn</code> сам. Адреса с «хвостом» (1.2.3.4/24) выровняю по границе сети автоматически.</p>
+      <textarea id="subnets" placeholder="173.194.0.0/16&#10;74.125.0.0/16&#10;108.177.0.0/17&#10;..."></textarea>
+      <div class="fields" style="margin-top:8px">
+        <div class="full"><label>Комментарий к маршрутам (по нему их потом легко найти/удалить)</label>
+        <input type="text" id="routeComment" value="VPN-YouTube"></div>
+      </div>
+      <div id="subnetMsg" class="msg"></div>
+      <details id="dmBox" style="margin-top:12px">
+        <summary>🔮 Собрать список автоматически (встроенный DomainMapper)</summary>
+        <p class="hint" style="margin-top:8px">Отметьте сервисы — списки доменов возьму из репозитория DomainMapper (Ground-Zerro), разрезолвлю через DNS-over-HTTPS прямо в браузере и сложу в подсети. Большие списки (Antifilter, ITDog — тысячи доменов) собираются несколько минут.</p>
+        <div id="svcGrid" class="grid2"><span class="hint">Загружаю список сервисов…</span></div>
+        <div id="metaDisc" class="msg"></div>
+        <div style="margin-top:12px">
+          <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">Свой список доменов (по желанию)</label>
+          <p class="hint" style="margin:0 0 6px">Добавьте свои домены — по одному на строку (можно с <code>*.</code>, можно готовые CIDR). Они добавятся к выбранным сервисам. Или загрузите файлом.</p>
+          <textarea id="customDomains" placeholder="example.com&#10;*.mysite.org&#10;10.20.30.0/24"></textarea>
+          <div class="btnrow" style="margin:6px 0 0">
+            <input type="file" id="domFile" accept=".txt,.lst,.csv" style="display:none" onchange="loadDomFile(this)">
+            <button class="sec" onclick="document.getElementById('domFile').click()">📄 Загрузить файл со списком</button>
+          </div>
+        </div>
+        <div class="fields" style="margin-top:12px">
+          <div>
+            <label>DNS-резолверы (DoH)</label>
+            <label class="chk"><input type="checkbox" id="dohCf" checked> Cloudflare (1.1.1.1)</label>
+            <label class="chk"><input type="checkbox" id="dohGg" checked> Google (8.8.8.8)</label>
+          </div>
+          <div>
+            <label>Сокращение до подсетей</label>
+            <label class="chk"><input type="radio" name="agg" value="32"> без сокращения (/32)</label>
+            <label class="chk"><input type="radio" name="agg" value="24" checked> до /24 — рекомендуется</label>
+            <label class="chk"><input type="radio" name="agg" value="16"> до /16 — короткий список</label>
+          </div>
+        </div>
+        <label class="chk" style="margin-top:6px"><input type="checkbox" id="addCfCdn"> Добавить сети CDN Cloudflare (рекомендация DomainMapper)</label>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="sec" id="dmRun" onclick="dmCollect()">⚙ Собрать подсети</button>
+          <button class="sec" id="dmStop" onclick="dmCancel=true" style="display:none">✋ Остановить</button>
+        </div>
+        <div id="dmProg" style="display:none">
+          <div class="pbar"><div id="pfill"></div></div>
+          <div class="hint" id="ptext"></div>
+        </div>
+        <div id="dmMsg" class="msg"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ШАГ 5: WI-FI -->
+  <div class="card">
+    <div class="step"><span class="num">5</span><h2>Wi-Fi</h2></div>
+    <label class="radio"><input type="radio" name="wmode" value="keep" checked>
+      <div><b>Использовать действующий Wi-Fi (ничего не менять)</b>
+      <span>Ваши Wi-Fi сети остаются как есть. Если на шаге 3 выбрана отдельная VPN-подсеть — подключайте к ней устройства сами (например, добавьте порт роутера в bridge-vpn; готовую команду дам в отчёте).</span></div></label>
+    <label class="radio"><input type="radio" name="wmode" value="new">
+      <div><b>Создать отдельную VPN Wi-Fi сеть</b>
+      <span>Появится второй SSID (на обоих диапазонах, поверх текущих радио). Подключился к нему — весь трафик через туннель; основной Wi-Fi работает как раньше. Синтаксис подберётся сам под прошивку: wifi (7.13+), wifiwave2 (ax на 7.9–7.12) или старый /interface/wireless.</span></div></label>
+    <div id="wifiBox" style="display:none;margin-top:8px">
+      <div class="fields">
+        <div><label>Имя сети (SSID)</label><input type="text" id="wifiSsid" value="Home-VPN"></div>
+        <div><label>Пароль Wi-Fi (мин. 8 символов)</label><input type="text" id="wifiPass" value=""></div>
+      </div>
+      <div id="wifiNetBox" style="display:none">
+        <div class="fields" style="margin-top:8px">
+          <div><label>Подсеть для VPN Wi-Fi (вида X.X.X.0/24)</label><input type="text" id="wifiSubnet" value="192.168.99.0/24"></div>
+        </div>
+        <p class="hint">Отдельный Wi-Fi технически требует отдельной подсети (иначе его трафик не отделить от основной сети) — она будет создана автоматически с kill-switch.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ШАГ 6: ДОПОЛНИТЕЛЬНО -->
+  <div class="card">
+    <div class="step"><span class="num">6</span><h2>Дополнительно</h2></div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px">Куда ставить контейнер</label>
+      <label class="chk"><input type="radio" name="stor" value="int" checked> Внутренняя память роутера (проверю свободное место)</label>
+      <label class="chk"><input type="radio" name="stor" value="usb"> USB / внешний диск — найду сам; если диска нет, поставлю на внутреннюю</label>
+    </div>
+    <details>
+      <summary>Логин Docker Hub (по желанию — лечит ошибку 429 при скачивании)</summary>
+      <div class="fields" style="margin-top:10px">
+        <div><label>Логин</label><input type="text" id="dhUser" autocomplete="off"></div>
+        <div><label>Пароль</label><input type="password" id="dhPass" autocomplete="off"></div>
+      </div>
+    </details>
+    <details>
+      <summary>Запасной образ (если Docker Hub недоступен из вашей сети)</summary>
+      <p class="hint" style="margin-top:10px">Скрипт сначала до 3 раз пробует скачать контейнер с Docker Hub. Если не вышло — поставит его из готового файла <code>.tar</code>, интернет к Docker больше не нужен. Образ ищется по порядку: <b>файл рядом со скриптом</b> → <b>скачивание по ссылке</b> → <b>сборка через podman/docker на ПК</b> (если установлены). Ничего заполнять не обязательно — по умолчанию скрипт ищет файл <code>vless-container-&lt;архитектура&gt;.tar</code> рядом с собой.</p>
+      <div class="fields">
+        <div class="full"><label>Ссылка на .tar образа (по желанию — ваше облако/GitHub)</label><input type="text" id="tarUrl" placeholder="https://github.com/USER/REPO/releases/download/v1/vless-container-{arch}.tar" autocomplete="off"></div>
+        <div class="full"><label>Имя файла образа рядом со скриптом (если отличается от стандартного)</label><input type="text" id="tarName" placeholder="vless-container-arm64.tar" autocomplete="off"></div>
+      </div>
+      <p class="hint" style="margin:2px 0 0"><b>Подсказка:</b> в ссылке можно написать <code>{arch}</code> — установщик сам подставит архитектуру роутера (<code>arm64</code>, <code>arm</code> или <code>x86_64</code>). Тогда <b>одна ссылка</b> подойдёт для всех моделей. Файлы образов (arm64/arm/x86_64) уже готовы — их дал вам ассистент.</p>
+      <details style="margin-top:8px">
+        <summary style="font-size:0.81rem">Как подготовить .tar (один раз, на ПК с podman/docker или на зарубежном VPS)</summary>
+        <pre style="max-height:none;margin-top:8px"># arm64 — hAP ax², ax³ и большинство новых
+podman pull --arch=arm64 docker.io/wiktorbgu/vless-sing-box-tunnel-mikrotik:latest
+podman save docker.io/wiktorbgu/vless-sing-box-tunnel-mikrotik:latest -o vless-container-arm64.tar
+
+# arm (32-бит, старые устройства)
+podman pull --arch=arm docker.io/wiktorbgu/vless-sing-box-tunnel-mikrotik:latest
+podman save docker.io/wiktorbgu/vless-sing-box-tunnel-mikrotik:latest -o vless-container-arm.tar</pre>
+        <p class="hint" style="margin:0">Положите нужный файл в ту же папку, что и setup.ps1/setup.sh (или раздайте его подписчикам). Docker: <code>docker pull --platform linux/arm64 …</code> и <code>docker save … -o …</code>.</p>
+      </details>
+    </details>
+    <details>
+      <summary>Продвинутое (обычно не трогать)</summary>
+      <div class="fields" style="margin-top:10px">
+        <div><label>Имя veth-интерфейса</label><input type="text" id="vethName" value="VLESS-TUN-SBOX"></div>
+        <div><label>root-dir контейнера</label><input type="text" id="rootDir" value="/docker/vless-tun-sing-box"></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="card" style="border-color:rgba(255,180,84,.35)">
+    <label class="chk" style="align-items:flex-start"><input type="checkbox" id="compliance" style="margin-top:3px">
+      <span>Я подтверждаю, что не планирую использовать списки маршрутизации на территории РФ и понимаю, что ответственность за соблюдение законодательства несу я сам.</span></label>
+  </div>
+
+  <div class="btnrow">
+    <button onclick="generate()">Сгенерировать скрипт →</button>
+  </div>
+  <div id="genMsg" class="msg"></div>
+
+  <!-- РЕЗУЛЬТАТ -->
+  <div class="card" id="out">
+    <div class="step"><span class="num">✓</span><h2>Готово: что будет сделано</h2></div>
+    <ul class="report" id="reportList"></ul>
+    <div id="ps1Wrap" style="display:none">
+      <div class="prereq" style="margin-bottom:10px"><b>Авто-режим:</b> скачайте установщик под вашу систему <b>и</b> файл vless-setup.rsc в <b>одну папку</b>.<br>
+      <b>Windows:</b> правый клик по <code>setup.ps1</code> → «Выполнить с помощью PowerShell» (если блокируется: открыть PowerShell → <code>Set-ExecutionPolicy -Scope Process Bypass -Force ; .\setup.ps1</code>).<br>
+      <b>macOS / Linux:</b> открыть Терминал в этой папке → <code>bash setup.sh</code>.<br>
+      Установщик определит модель роутера и откроет её карточку с фото, сделает бэкап (если включён) и дальше всё сам, рассказывая в консоли, что происходит.</div>
+      <div class="btnrow">
+        <button class="sec" id="dlPs1" onclick="downloadPs1()">💾 setup.ps1 (Windows)</button>
+        <button class="sec" id="dlSh" onclick="downloadSh()">💾 setup.sh (macOS / Linux)</button>
+        <button class="sec" onclick="downloadScript()">💾 vless-setup.rsc</button>
+      </div>
+      <details><summary>Показать setup.ps1</summary><pre id="ps1Out"></pre></details>
+      <details><summary>Показать setup.sh</summary><pre id="shOut"></pre></details>
+      <p class="hint">Ниже — сам vless-setup.rsc, который зальётся на роутер (для справки):</p>
+    </div>
+    <div id="manualWrap" style="display:none">
+      <h3>Шаг А. Резервная копия (сделайте до установки)</h3>
+      <p class="hint">Вставьте в терминал роутера, затем скачайте оба файла из WinBox → Files на ПК:</p>
+      <pre id="backupOut" style="max-height:120px"></pre>
+      <div class="btnrow"><button class="sec" onclick="copyBackup()" id="copyBkBtn">📋 Скопировать команды бэкапа</button></div>
+      <h3>Шаг Б. Установка</h3>
+      <p class="hint">Вариант 1 (надёжнее): скачайте файл, закиньте в Files роутера и выполните <code>/import vless-setup.rsc verbose=yes</code>.<br>
+      Вариант 2: нажмите «Скопировать» и вставьте всё целиком в терминал WinBox (New Terminal, вставка — правая кнопка мыши). При больших списках маршрутов используйте вариант 1.</p>
+    </div>
+    <div class="btnrow">
+      <button class="sec" onclick="copyScript()" id="copyBtn">📋 Скопировать .rsc</button>
+      <button class="sec" onclick="downloadScript()">💾 Скачать vless-setup.rsc</button>
+    </div>
+    <pre id="scriptOut"></pre>
+  </div>
+</div>
+
+<script>
+'use strict';
+let parsedKeys = [];   // [{name, addr, port, id, pbk, sni, sid, flow, fp, security}]
+let chosen = -1;
+let lastPs1 = '';
+let lastSh = '';
+let lastBackupCmds = '';
+
+function show(id, cls, text){
+  const el = document.getElementById(id);
+  el.className = 'msg ' + cls; el.innerHTML = text;
+}
+function hide(id){ document.getElementById(id).className = 'msg'; }
+function el(id){ return document.getElementById(id); }
+function qval(name){ const r = document.querySelector('input[name=' + name + ']:checked'); return r ? r.value : ''; }
+
+/* ---------- разбор ключей ---------- */
+function b64try(s){
+  try{
+    let t = s.replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/');
+    while(t.length % 4) t += '=';
+    const dec = atob(t);
+    return /vless:\/\//.test(dec) ? dec : null;
+  }catch(e){ return null; }
+}
+
+function parseVlessLink(link){
+  const m = link.trim().match(/^vless:\/\/([^@]+)@(\[[^\]]+\]|[^:\/?#]+):(\d+)[^?#]*\?([^#]*)(?:#(.*))?$/);
+  if(!m) return null;
+  const p = new URLSearchParams(m[4]);
+  const sniRaw = p.get('sni') || '';
+  return {
+    id: decodeURIComponent(m[1]),
+    addr: m[2].replace(/^\[|\]$/g,''),
+    port: m[3],
+    pbk: p.get('pbk') || '',
+    sni: sniRaw.split(',')[0].trim(),
+    sid: p.get('sid') || '',
+    flow: p.get('flow') || '',
+    fp: p.get('fp') || 'chrome',
+    security: p.get('security') || '',
+    type: p.get('type') || '',
+    name: m[5] ? decodeURIComponent(m[5]) : ''
+  };
+}
+
+function parseKeys(){
+  hide('keyMsg');
+  el('keyList').innerHTML = '';
+  el('parsedBox').style.display = 'none';
+  parsedKeys = []; chosen = -1;
+  let raw = el('keyInput').value.trim();
+  if(!raw){ show('keyMsg','err','Вставьте ключ или подписку.'); return; }
+  if(!/vless:\/\//.test(raw)){
+    const dec = b64try(raw);
+    if(dec){ raw = dec; }
+    else { show('keyMsg','err','Не нашёл vless:// и не смог раскодировать как base64-подписку. Проверьте, что вставили ключ целиком.'); return; }
+  }
+  const links = raw.match(/vless:\/\/[^\s"'<>]+/g) || [];
+  for(const l of links){
+    const k = parseVlessLink(l);
+    if(k) parsedKeys.push(k);
+  }
+  if(!parsedKeys.length){ show('keyMsg','err','Ссылки vless:// найдены, но не разобрались. Пришлите ключ как есть — формат нестандартный.'); return; }
+  const others = (raw.match(/\b(ss|trojan|vmess):\/\//g)||[]).length;
+  let note = 'Найдено VLESS-ключей: ' + parsedKeys.length + (others? ' (ключи других протоколов пропущены — контейнер поддерживает только VLESS Reality)':'');
+  show('keyMsg','ok',note);
+  if(parsedKeys.length === 1){ selectKey(0); }
+  else{
+    const box = el('keyList');
+    box.innerHTML = '<p class="hint">Какой ключ использовать для роутера?</p>';
+    parsedKeys.forEach((k,i)=>{
+      const lb = document.createElement('label'); lb.className='radio';
+      lb.innerHTML = '<input type="radio" name="pk" onchange="selectKey('+i+')">'+
+        '<div><b>'+(k.name||('Ключ '+(i+1)))+'</b><span>'+k.addr+':'+k.port+' · sni '+(k.sni||'—')+'</span></div>';
+      box.appendChild(lb);
+    });
+  }
+}
+
+function selectKey(i){
+  chosen = i;
+  const k = parsedKeys[i];
+  el('parsedBox').style.display = 'block';
+  el('f_addr').value = k.addr;
+  el('f_port').value = k.port;
+  el('f_id').value = k.id;
+  el('f_pbk').value = k.pbk;
+  el('f_sni').value = k.sni;
+  el('f_sid').value = k.sid;
+  el('f_flow').value = k.flow;
+  el('f_fp').value = k.fp;
+  const warns = [];
+  if(k.security && k.security !== 'reality') warns.push('security=' + k.security + ' — контейнер рассчитан на Reality, проверьте ключ');
+  if(!k.pbk) warns.push('в ключе нет pbk (public key) — Reality без него не заработает');
+  if(!k.flow) warns.push('flow пустой — нормально, только если у клиента на сервере Flow тоже не задан');
+  if(warns.length) show('keyMsg','warn','Ключ разобран, но обратите внимание:<br>• ' + warns.join('<br>• '));
+}
+
+/* ---------- утилиты для генерации ---------- */
+// экранирование значения для RouterOS-строки в кавычках: \ " $ имеют спецсмысл
+function rq(s){
+  return String(s).replace(/[\r\n\t]/g,' ').trim()
+    .replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\$/g,'\\$');
+}
+// значение для вставки в PowerShell (IP/логин): только безопасные символы
+function idq(s){ return String(s).replace(/[^A-Za-z0-9._\-]/g,''); }
+
+// нормализация CIDR: выравнивание по границе сети (1.2.3.4/24 -> 1.2.3.0/24)
+function normCidr(c){
+  const parts = c.split('/');
+  const pre = +parts[1];
+  const p = parts[0].split('.').map(Number);
+  let v = ((p[0] * 16777216) + (p[1] * 65536) + (p[2] * 256) + p[3]) >>> 0;
+  const mask = pre === 0 ? 0 : (0xFFFFFFFF << (32 - pre)) >>> 0;
+  v = (v & mask) >>> 0;
+  return [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255].join('.') + '/' + pre;
+}
+
+function extractCidrs(text){
+  const found = text.match(/\b(?:\d{1,3}\.){3}\d{1,3}\/\d{1,2}\b/g) || [];
+  const ok = [];
+  const seen = new Set();
+  for(const c of found){
+    const [ip, pre] = c.split('/');
+    if(+pre > 32) continue;
+    if(ip.split('.').some(o => +o > 255)) continue;
+    const n = normCidr(c);
+    if(!seen.has(n)){ seen.add(n); ok.push(n); }
+  }
+  return ok;
+}
+
+function ipVal(cidr){ const p = cidr.split('/')[0].split('.'); return ((+p[0])*16777216)+((+p[1])*65536)+((+p[2])*256)+(+p[3]); }
+
+function parseSubnet24(s){
+  const m = String(s).trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}\/(\d{1,2})$/);
+  if(!m || m[4] !== '24') return null;
+  if([m[1],m[2],m[3]].some(o => +o > 255)) return null;
+  const pfx = m[1] + '.' + m[2] + '.' + m[3] + '.';
+  return { net: pfx + '0/24', gw: pfx + '1', poolS: pfx + '10', poolE: pfx + '254' };
+}
+
+/* ---------- видимость шагов ---------- */
+function updateUI(){
+  const auto = qval('imode') === 'auto';
+  el('connBox').style.display = auto ? 'grid' : 'none';
+  el('backupBox').style.display = auto ? 'block' : 'none';
+  el('connHint').style.display = auto ? 'block' : 'none';
+
+  const nm = qval('netmode');
+  el('netBox').style.display = nm === 'new' ? 'block' : 'none';
+  el('rmodeBox').style.display = nm === 'existing' ? 'block' : 'none';
+  el('extraBox').style.display = nm === 'new' ? 'block' : 'none';
+
+  const wifiNew = qval('wmode') === 'new';
+  el('wifiBox').style.display = wifiNew ? 'block' : 'none';
+  el('wifiNetBox').style.display = (wifiNew && nm === 'existing') ? 'block' : 'none';
+
+  const listVisible = (nm === 'existing') ? (qval('rmode') === 'list') : el('chkExtra').checked;
+  el('listBox').style.display = listVisible ? 'block' : 'none';
+}
+['imode','netmode','wmode','rmode'].forEach(n =>
+  document.querySelectorAll('input[name=' + n + ']').forEach(r => r.addEventListener('change', updateUI)));
+el('chkExtra').addEventListener('change', updateUI);
+updateUI();
+
+/* ---------- масштаб шрифта (A− / A+) ---------- */
+const FS = [80, 90, 100, 110, 120, 130, 140];
+let fsIdx = 2; // 100%
+function applyFont(){
+  document.documentElement.style.fontSize = (16 * FS[fsIdx] / 100) + 'px';
+  el('fsVal').textContent = FS[fsIdx] + '%';
+  try{ localStorage.setItem('vlessWizFs', String(fsIdx)); }catch(e){}
+}
+function fontScale(d){ fsIdx = Math.min(FS.length - 1, Math.max(0, fsIdx + d)); applyFont(); }
+(function(){
+  try{
+    const v = parseInt(localStorage.getItem('vlessWizFs'), 10);
+    if(!isNaN(v) && v >= 0 && v < FS.length) fsIdx = v;
+  }catch(e){}
+  applyFont();
+})();
+
+/* ---------- определение ОС (для подсказки, какой установщик брать) ---------- */
+const isMac = /Mac|iPhone|iPad/i.test(navigator.platform || '') || /Mac OS X/.test(navigator.userAgent || '');
+const isWin = /Win/i.test(navigator.platform || '') || /Windows/.test(navigator.userAgent || '');
+el('osHint').textContent = isMac ? '💻 Похоже, у вас macOS — ваш установщик: setup.sh'
+  : (isWin ? '💻 Похоже, у вас Windows — ваш установщик: setup.ps1' : '');
+
+/* ---------- генерация ---------- */
+function generate(){
+  hide('genMsg');
+  const get = id => rq(el(id).value);
+  const addr = get('f_addr'), port = get('f_port'), uuid = get('f_id'),
+        pbk = get('f_pbk'), sni = get('f_sni'), sid = get('f_sid'),
+        flow = get('f_flow'), fp = get('f_fp') || 'chrome';
+  if(chosen < 0 || !addr || !port || !uuid){
+    show('genMsg','err','Сначала разберите ключ на шаге 1.'); return;
+  }
+  if(!/^\d+$/.test(port)){ show('genMsg','err','Порт должен быть числом.'); return; }
+
+  const imode = qval('imode');                 // auto | manual
+  const doBackup = el('chkBackup').checked;
+  const rIp = idq(el('routerIp').value) || '192.168.88.1';
+  const rUser = idq(el('routerUser').value) || 'admin';
+
+  const nm = qval('netmode');                  // existing | new
+  const wifiNew = qval('wmode') === 'new';
+  const vpnNet = (nm === 'new') || wifiNew;    // нужна отдельная подсеть?
+
+  // параметры подсети: из шага 3 (если там new), иначе из блока Wi-Fi
+  let sn = null;
+  if(vpnNet){
+    const src = (nm === 'new') ? el('netSubnet').value : el('wifiSubnet').value;
+    sn = parseSubnet24(src);
+    if(!sn){ show('genMsg','err','Подсеть VPN укажите в виде X.X.X.0/24 (поддерживается /24).'); return; }
+  }
+
+  // Wi-Fi параметры
+  let wSsid = '', wPass = '';
+  if(wifiNew){
+    wSsid = rq(el('wifiSsid').value);
+    wPass = rq(el('wifiPass').value);
+    if(!wSsid){ show('genMsg','err','Укажите имя Wi-Fi сети (SSID) на шаге 5.'); return; }
+    if(el('wifiPass').value.trim().length < 8){ show('genMsg','err','Пароль Wi-Fi должен быть не короче 8 символов (шаг 5).'); return; }
+  }
+
+  // маршрутизация
+  let effR = 'none', cidrs = [], comment = '';
+  if(nm === 'existing'){
+    effR = qval('rmode');
+  } else {
+    effR = el('chkExtra').checked ? 'list' : 'none';
+  }
+  if(effR === 'list'){
+    cidrs = extractCidrs(el('subnets').value);
+    comment = rq(el('routeComment').value) || 'VPN-routes';
+    if(!cidrs.length){
+      show('genMsg','err','Выбрана маршрутизация по списку, но подсети не найдены. Вставьте список на шаге 4 (или соберите его встроенным DomainMapper).');
+      return;
+    }
+    show('subnetMsg','ok','Распознано подсетей: ' + cidrs.length);
+  }
+
+  if(!el('compliance').checked){
+    show('genMsg','err','Отметьте подтверждение внизу, что не планируете использовать списки маршрутизации на территории РФ.');
+    el('compliance').scrollIntoView({behavior:'smooth'}); return;
+  }
+
+  const veth = rq(el('vethName').value) || 'VLESS-TUN-SBOX';
+  const rootDir = rq(el('rootDir').value) || '/docker/vless-tun-sing-box';
+  const dhUser = rq(el('dhUser').value);
+  const dhPass = rq(el('dhPass').value);
+  const stor = qval('stor');                   // int | usb
+  // значение env для вставки в :parse-строку: оставляем только символы, реальные для VLESS-параметров
+  // (домен/IP/UUID/base64/слова). Кавычки/пробелы/бэкслеши в env VLESS не встречаются.
+  const envq = s => String(s || '').replace(/[^A-Za-z0-9.\-_+/=:,]/g, '');
+  // экранирование блока RouterOS-кода для вставки внутрь :parse "..." (бэкслеш и кавычки)
+  const pesc = s => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  // запасной образ: имя файла (для .rsc — экранируем как RouterOS-строку), URL и «сырые» значения для ps1/sh
+  const safe = s => String(s || '').replace(/[\r\n\t"`$\\]/g, '').trim();
+  const userTar = rq(el('tarName').value);      // для подстановки в .rsc
+  const tarNameRaw = safe(el('tarName').value); // для установщиков
+  const tarUrlRaw = safe(el('tarUrl').value);
+
+  /* ----- сводка (для страницы и шапки скрипта; без экранирования) ----- */
+  const un = s => String(s).replace(/\\(["$\\])/g, '$1');
+  const sum = [];
+  sum.push('Сервер VLESS: ' + un(addr) + ':' + port + (sni ? (' (sni ' + un(sni) + ')') : ''));
+  sum.push(imode === 'auto'
+    ? ('Установка: автоматически по SSH на ' + rIp + (doBackup ? ' — сначала резервная копия с сохранением на ПК' : ' — БЕЗ резервной копии (отключена)'))
+    : 'Установка: вручную — команды резервной копии + скрипт для /import');
+  sum.push(vpnNet
+    ? ('Отдельная VPN-подсеть: ' + sn.net + ' (шлюз ' + sn.gw + ', DHCP ' + sn.poolS + '–' + sn.poolE + ', kill-switch: без туннеля нет интернета)')
+    : 'Сети: используется действующая сеть, новые подсети не создаются');
+  if(effR === 'list') sum.push('Маршрутизация' + (nm === 'new' ? ' (для основной сети)' : '') + ': по списку — ' + cidrs.length + ' подсетей, комментарий «' + un(comment) + '»');
+  if(effR === 'all') sum.push('Маршрутизация: ВЕСЬ трафик роутера через туннель (+ маршрут-исключение до VPS)');
+  if(effR === 'none') sum.push(vpnNet ? 'Маршрутизация: вся VPN-подсеть через туннель; списков для основной сети нет' : 'Маршрутизация: не настраивается (добавите позже, шлюз 172.18.20.6)');
+  sum.push(wifiNew ? ('Wi-Fi: новый SSID «' + un(wSsid) + '» на всех радио (новые и старые прошивки)') : 'Wi-Fi: без изменений');
+  sum.push('Хранилище: ' + (stor === 'usb' ? 'USB/внешний диск (с откатом на внутреннюю память)' : 'внутренняя память (с проверкой места)'));
+  if(dhUser) sum.push('Docker Hub: авторизация включена (логин ' + un(dhUser) + ')');
+  sum.push('Загрузка образа: 3 попытки с Docker Hub, затем запасной .tar' +
+    (tarUrlRaw ? (' (ссылка: ' + tarUrlRaw + ')') : (tarNameRaw ? (' (файл ' + tarNameRaw + ' рядом со скриптом)') : ' (файл vless-container-<арх>.tar рядом со скриптом / podman)')));
+
+  /* ----- сборка RouterOS-скрипта ----- */
+  const L = [];
+  const P = s => L.push(s);
+  const totalSteps = 7 + (effR !== 'none' ? 1 : 0) + (vpnNet ? 2 : 0) + (wifiNew ? 1 : 0);
+  let stepN = 0;
+  const sec = (title, why) => {
+    stepN++;
+    P('');
+    P(':put ""');
+    P(':put "=== [' + stepN + '/' + totalSteps + '] ' + title + ' ==="');
+    if(why) P(':put "    Зачем: ' + why + '"');
+  };
+
+  P('# ============================================================');
+  P('#  MikroTik + VLESS (sing-box) - скрипт сгенерирован мастером');
+  for(const s of sum) P('#  ' + s.replace(/–/g,'-'));
+  P('#  Запуск: закинуть в Files и выполнить  /import vless-setup.rsc verbose=yes');
+  P('#  (или вставить целиком в терминал; при больших списках - только /import)');
+  P('#  Повторный запуск безопасен: дубликаты не создаются.');
+  P('# ============================================================');
+  P('{');
+  P(':local vethName "' + veth + '"');
+  P(':local rootDir "' + rootDir + '"');
+
+  sec('Проверки совместимости', 'контейнеры работают только на arm/arm64/x86, с пакетом container и включённым device-mode.');
+  P(':local arch [/system/resource/get architecture-name]');
+  P(':local ver [/system/resource/get version]');
+  P(':local board ""');
+  P(':do { :set board [/system/resource/get board-name] } on-error={}');
+  P(':put ("Роутер: $board | RouterOS $ver | архитектура: $arch | свободно: " . ([/system/resource/get free-hdd-space]/1048576) . " МБ")');
+  P(':if (($arch != "arm") and ($arch != "arm64") and ($arch != "x86") and ($arch != "x86_64")) do={');
+  P('  :put ("ОШИБКА: архитектура $arch не поддерживает контейнеры MikroTik (нужна arm, arm64 или x86). Установка невозможна на этом устройстве.")');
+  P('  :error "unsupported architecture"');
+  P('}');
+  P(':if ([:len [/system/package/find name="container"]] = 0) do={');
+  P('  :put ("ОШИБКА: пакет container не установлен. Скачайте Extra packages ровно вашей версии ($ver) для $arch,")');
+  P('  :put "закиньте container-*.npk в Files, перезагрузите роутер и запустите скрипт снова."');
+  P('  :error "container package missing"');
+  P('}');
+  P(':local dmv ""');
+  P(':do { :set dmv [:tostr [/system/device-mode/get container]] } on-error={ :set dmv "" }');
+  P(':if (($dmv != "true") and ($dmv != "yes")) do={');
+  P('  :put "ОШИБКА: режим контейнеров (device-mode) не активирован."');
+  P('  :put "Выполните: /system/device-mode/update container=yes"');
+  P('  :put "и в течение 5 минут ВЫКЛЮЧИТЕ РОУТЕР ИЗ РОЗЕТКИ и включите обратно (программный reboot не подходит). Затем запустите скрипт снова."');
+  P('  :error "device-mode container=no"');
+  P('}');
+  P(':put "Все проверки пройдены."');
+
+  sec('Сертификаты и время', 'без доверенных CA и правильных часов HTTPS-загрузка образа с Docker Hub упадёт с ошибкой сертификата.');
+  P(':local certOk false');
+  P('# ВАЖНО: команду задаём через :parse. Иначе на прошивке, где параметра ещё/уже нет,');
+  P('# это ОШИБКА ПАРСИНГА (не runtime), и обычный :do..on-error её НЕ ловит - весь скрипт падает.');
+  P('# trust-store: ROS 7.21+ | trust-anchors: ROS 7.19-7.20 | старее - нет ни того, ни другого.');
+  P(':do { :local cf [:parse "/certificate/settings/set builtin-trust-store=fetch"] ; $cf ; :set certOk true ; :put "Встроенные CA включены (builtin-trust-store, ROS 7.21+)" } on-error={}');
+  P(':if (!$certOk) do={ :do { :local cf [:parse "/certificate/settings/set builtin-trust-anchors=trusted"] ; $cf ; :set certOk true ; :put "Встроенные CA включены (builtin-trust-anchors, ROS 7.19-7.20)" } on-error={} }');
+  P(':if (!$certOk) do={ :put "Встроенные доверенные CA недоступны (ROS < 7.19) - это нормально. Если загрузка образа упадёт по сертификату, обновите RouterOS или ставьте из локального .tar." }');
+  P(':do { /system/ntp/client/set enabled=yes servers=time.cloudflare.com,pool.ntp.org ; :put "NTP включён (часы будут точными)" } on-error={}');
+
+  sec('veth-интерфейс', 'это виртуальный сетевой кабель между RouterOS (172.18.20.5) и контейнером (172.18.20.6).');
+  P(':if ([:len [/interface/veth/find where name=$vethName]] = 0) do={');
+  P('  :do { /interface/veth/add name=$vethName address=172.18.20.6/30 gateway=172.18.20.5 gateway6="" } on-error={ /interface/veth/add name=$vethName address=172.18.20.6/30 gateway=172.18.20.5 }');
+  P('  :put "veth создан"');
+  P('} else={ :put "veth уже есть - пропускаю" }');
+  P(':if ([:len [/ip/address/find where interface=$vethName]] = 0) do={ /ip/address/add interface=$vethName address=172.18.20.5/30 }');
+
+  sec('Firewall: MSS и NAT', 'MSS-клампинг чинит «подвисающие» сайты (пакеты не лезут в туннель), NAT выпускает трафик через контейнер.');
+  P(':if ([:len [/ip/firewall/mangle/find where comment="vless-sbox-mss"]] = 0) do={');
+  P('  /ip/firewall/mangle/add action=change-mss chain=forward new-mss=1360 out-interface=$vethName passthrough=yes protocol=tcp tcp-flags=syn tcp-mss=1361-65535 comment="vless-sbox-mss"');
+  P('}');
+  P(':if ([:len [/ip/firewall/nat/find where comment="vless-sbox-nat"]] = 0) do={');
+  P('  /ip/firewall/nat/add action=masquerade chain=srcnat out-interface=$vethName comment="vless-sbox-nat"');
+  P('}');
+  P(':put "Правила firewall готовы (комментарии vless-sbox-mss / vless-sbox-nat)"');
+
+  sec('Хранилище и registry', 'образу нужно место для загрузки и распаковки; registry - откуда качать (Docker Hub).');
+  P(':local storMode "' + stor + '"');
+  P(':local tmpTarget ""');
+  P(':if ($storMode = "usb") do={');
+  P('  :local slot ""');
+  P('  :local anySlot ""');
+  P('  :do { :foreach d in=[/disk/find] do={');
+  P('    :local ty "" ; :do { :set ty [:tostr [/disk/get $d type]] } on-error={}');
+  P('    :local sl "" ; :do { :set sl [:tostr [/disk/get $d slot]] } on-error={}');
+  P('    :if (($ty != "tmpfs") and ([:len $sl] > 0)) do={');
+  P('      :if ([:len $anySlot] = 0) do={ :set anySlot $sl }');
+  P('      :if (($sl ~ "usb") and ([:len $slot] = 0)) do={ :set slot $sl }');
+  P('    }');
+  P('  } } on-error={}');
+  P('  :if ([:len $slot] = 0) do={ :set slot $anySlot }');
+  P('  :if ([:len $slot] > 0) do={');
+  P('    :set rootDir ($slot . "/vless-tun-sing-box")');
+  P('    :set tmpTarget ($slot . "/tmp")');
+  P('    :put ("Внешний диск найден: $slot - контейнер и распаковка пойдут на него")');
+  P('  } else={ :put "USB/внешний диск не найден - ставлю на внутреннюю память" ; :set storMode "int" }');
+  P('}');
+  P(':if ($storMode = "int") do={');
+  P('  :local freeB [/system/resource/get free-hdd-space]');
+  P('  :if ($freeB < 31457280) do={ :put ("ОШИБКА: свободно " . ($freeB/1048576) . " МБ (<30). Освободите место (/file), подключите USB или выберите USB в мастере.") ; :error "not enough space" }');
+  P('  :if ($freeB < 52428800) do={ :put ("Внимание: свободно " . ($freeB/1048576) . " МБ (<50) - может не хватить при распаковке, продолжаю.") }');
+  P('  :local tmpOk false');
+  P('  :do { :if ([:len [/disk/find where slot="ramstorage"]] > 0) do={ :set tmpOk true } } on-error={}');
+  P('  :if (!$tmpOk) do={ :do { /disk/add slot=ramstorage type=tmpfs tmpfs-max-size=150M ; :set tmpOk true ; :put "Создан tmpfs-диск ramstorage (распаковка в RAM - быстрее и не изнашивает флешку)" } on-error={ :put "tmpfs недоступен (старый ROS) - распаковка пойдёт на встроенную память" } }');
+  P('  :if ($tmpOk) do={ :set tmpTarget "ramstorage" }');
+  P('}');
+  P(':if ([:len $tmpTarget] > 0) do={ /container/config/set registry-url=https://registry-1.docker.io tmpdir=$tmpTarget } else={ /container/config/set registry-url=https://registry-1.docker.io tmpdir="" }');
+  if(dhUser){
+    P(':do { /container/config/set username="' + dhUser + '" password="' + dhPass + '" ; :put "Авторизация Docker Hub включена (защита от лимита 429)" } on-error={}');
+  }
+  P(':put ("Хранилище настроено: " . $rootDir)');
+
+  sec('Переменные окружения из ключа', 'контейнер читает параметры VLESS (адрес, порт, ключи Reality) из этих 8 переменных.');
+  P('# ВАЖНО: имя параметра списка env различается по версиям RouterOS:');
+  P('#   list= - на новых (7.19+/переименовали), name= - на 7.18 и старее.');
+  P('# Неизвестный параметр = ОШИБКА ПАРСИНГА (не runtime), обычный :do..on-error её НЕ ловит.');
+  P('# Поэтому определяем рабочее имя через :parse (единственный способ поймать такую ошибку).');
+  P(':local ep ""');
+  P(':do { :local f [:parse "/container/envs/add list=__vprobe key=P value=1"] ; $f ; :set ep "list" } on-error={}');
+  P(':if ($ep = "") do={ :do { :local f [:parse "/container/envs/add name=__vprobe key=P value=1"] ; $f ; :set ep "name" } on-error={} }');
+  P(':do { /container/envs/remove [/container/envs/find where key="P"] } on-error={}');
+  P(':if ($ep = "") do={ :put "ОШИБКА: /container/envs/add не принимает ни list= ни name= (неизвестная версия RouterOS)." ; :error "envs param unknown" }');
+  P(':put ("Синтаксис переменных на этой прошивке: " . $ep . "=vless")');
+  P('# чистим прежние наши переменные (через :parse, т.к. find where зависит от имени параметра)');
+  P(':do { :local f [:parse ("/container/envs/remove [/container/envs/find where " . $ep . "=vless]")] ; $f } on-error={}');
+  const envsAll = [['REMOTE_ADDRESS',addr],['REMOTE_PORT',port],['ID',uuid],['FLOW',flow],['FINGER_PRINT',fp],['SERVER_NAME',sni],['PUBLIC_KEY',pbk],['SHORT_ID',sid]];
+  for(const [k,v] of envsAll){
+    P(':do { :local f [:parse ("/container/envs/add " . $ep . "=vless key=' + k + ' value=\\"' + envq(v) + '\\"")] ; $f } on-error={ :put "не добавилась env: ' + k + '" }');
+  }
+  P(':put "8 переменных окружения добавлены"');
+
+  sec('Контейнер: установка', 'сначала пробую локальный .tar (если он на роутере); иначе качаю с Docker Hub - до 3 попыток; если и это не вышло - подскажу, как поставить из файла.');
+  P(':local cimg "wiktorbgu/vless-sing-box-tunnel-mikrotik"');
+  P(':local parch $arch');
+  P(':if (($arch = "x86_64") or ($arch = "x86")) do={ :set parch "amd64" }');
+  P(':do { :foreach i in=[/container/find where root-dir=$rootDir] do={ :do { /container/stop $i ; :delay 3s } on-error={} ; /container/remove $i ; :put "Старый контейнер удалён (переустановка)" } } on-error={}');
+  P('# ищем готовый образ .tar, уже залитый на роутер');
+  P(':local tarFile "' + (userTar || '') + '"');
+  P(':if (([:len $tarFile] > 0) and ([:len [/file/find where name=$tarFile]] = 0)) do={ :set tarFile "" }');
+  P(':if ([:len $tarFile] = 0) do={ :do { :foreach f in=[/file/find] do={');
+  P('  :local fn [:tostr [/file/get $f name]]');
+  P('  :if (($fn ~ "\\\\.tar") and (($fn ~ "vless") or ($fn ~ "sing") or ($fn ~ "sbox") or ($fn ~ "container"))) do={ :if ([:len $tarFile] = 0) do={ :set tarFile $fn } }');
+  P('} } on-error={} }');
+  P(':local st ""');
+  P(':if ([:len $tarFile] > 0) do={');
+  P('  :put ("Найден локальный образ: $tarFile - ставлю из файла, Docker Hub не нужен")');
+  P('  :do { /container/add file=$tarFile interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes dns=1.1.1.1,8.8.8.8 } on-error={ /container/add file=$tarFile interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes }');
+  P('  :local w 0');
+  P('  :while ($w < 300) do={ :delay 10s ; :set w ($w + 10) ; :do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={ :set st "" } ; :put ("  распаковка из файла: $st, $w сек") ; :if (($st = "stopped") or ($st = "running") or ($st = "error")) do={ :set w 300 } }');
+  P('} else={');
+  P('  :put "Локального образа нет - качаю с Docker Hub (до 3 попыток)..."');
+  P('  :local done false');
+  P('  :for att from=1 to=3 do={');
+  P('    :if (!$done) do={');
+  P('      :put ("  === попытка $att из 3 ===")');
+  P('      :do { :foreach i in=[/container/find where root-dir=$rootDir] do={ :do { /container/stop $i ; :delay 2s } on-error={} ; /container/remove $i } } on-error={}');
+  P('      :do { /container/add remote-image=$cimg interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes dns=1.1.1.1,8.8.8.8 } on-error={ /container/add remote-image=$cimg interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes }');
+  P('      :local w 0');
+  P('      :set st ""');
+  P('      :while ($w < 300) do={ :delay 15s ; :set w ($w + 15) ; :do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={ :set st "" } ; :put ("    статус: $st, $w сек") ; :if (($st = "stopped") or ($st = "running") or ($st = "error")) do={ :set w 300 } }');
+  P('      :if (($st = "stopped") or ($st = "running")) do={ :set done true } else={ :put ("  попытка $att не удалась (статус: $st)") ; :delay 15s }');
+  P('    }');
+  P('  }');
+  P('  :if (!$done) do={');
+  P('    :put "!! Docker Hub недоступен после 3 попыток, а локального образа рядом нет."');
+  P('    :put "   Как поставить из файла (получить образ там, где Docker Hub открыт - ПК с podman/docker или зарубежный VPS):"');
+  P('    :put ("     podman pull --arch=" . $parch . " docker.io/" . $cimg . ":latest")');
+  P('    :put ("     podman save docker.io/" . $cimg . ":latest -o vless-container-" . $arch . ".tar")');
+  P('    :put "   Залейте .tar в Files роутера (Winbox -> Files) и запустите скрипт снова - он поставит из файла."');
+  P('    :put "   В авто-режиме проще: положите vless-container-<арх>.tar рядом с setup.ps1/setup.sh - установщик сам зальёт и доустановит."');
+  P('  }');
+  P('}');
+  P(':do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={ :set st "" }');
+  P(':if ($st = "stopped") do={');
+  P('  :put "Образ готов. Запускаю контейнер..."');
+  P('  /container/start [/container/find where root-dir=$rootDir]');
+  P('  :delay 12s');
+  P('  :do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={}');
+  P('}');
+  P(':if ($st != "running") do={');
+  P('  :put "Контейнер не в running. Частые причины:"');
+  P('  :put " - образ не скачался и файла нет: см. подсказку про .tar выше"');
+  P('  :put " - контейнер падает сразу: почти всегда неверные значения из ключа vless://"');
+  P('  :put "   проверьте: PUBLIC_KEY=pbk (не приватный!), SHORT_ID=sid, SERVER_NAME=sni, REMOTE_PORT=порт инбаунда"');
+  P('  :put " - смотрите живой лог контейнера: /log/print where topics~\\"container\\""');
+  P('}');
+
+  if(effR !== 'none'){
+    sec('Маршрутизация', effR === 'all' ? 'весь трафик роутера направляется в туннель, кроме пути до самого VPS (иначе петля).' : 'только указанные сети идут через туннель, остальное - напрямую.');
+    P(':if ($st = "running") do={');
+    if(effR === 'all'){
+      P('  :do { /ip/route/remove [/ip/route/find where comment="vless-wizard-all"] } on-error={}');
+      P('  :do { /ip/route/remove [/ip/route/find where comment="vless-wizard-exclude"] } on-error={}');
+      P('  :local vpsIp "' + addr + '"');
+      P('  :do { :set vpsIp [:tostr [:resolve "' + addr + '"]] } on-error={}');
+      P('  :local defgw ""');
+      P('  :do { :set defgw [/ip/route/get [:pick [/ip/route/find where dst-address="0.0.0.0/0" active=yes] 0] gateway] } on-error={}');
+      P('  :if ([:len $defgw] > 0) do={');
+      P('    :do { /ip/route/add dst-address=($vpsIp . "/32") gateway=$defgw comment="vless-wizard-exclude" ; :put ("Маршрут-исключение до VPS $vpsIp через провайдера добавлен") } on-error={ :put "ВНИМАНИЕ: не удалось добавить маршрут-исключение до VPS - возможна петля!" }');
+      P('  } else={ :put "ВНИМАНИЕ: не нашёл шлюз провайдера - маршрут-исключение до VPS не добавлен, возможна петля!" }');
+      P('  /ip/route/add dst-address=0.0.0.0/1 gateway=172.18.20.6 comment="vless-wizard-all"');
+      P('  /ip/route/add dst-address=128.0.0.0/1 gateway=172.18.20.6 comment="vless-wizard-all"');
+      P('  :put "Весь трафик направлен в туннель"');
+    } else {
+      P('  :do { /ip/route/remove [/ip/route/find where comment="' + comment + '"] } on-error={}');
+      P('  :put "Добавляю маршруты списком, батчами по 30 (защита от лимита ввода в терминал)..."');
+      const CH = 30;
+      for(let i = 0; i < cidrs.length; i += CH){
+        const arr = '{"' + cidrs.slice(i, i + CH).join('";"') + '"}';
+        P('  :foreach n in=' + arr + ' do={ :do { /ip/route/add dst-address=$n gateway=172.18.20.6 comment="' + comment + '" } on-error={ :put ("  пропущен некорректный маршрут: $n") } }');
+      }
+      P('  :put ("Добавлено маршрутов: " . [:len [/ip/route/find where comment="' + comment + '"]] . " (комментарий \\"' + comment + '\\")")');
+    }
+    P('} else={');
+    P('  :put "Маршруты НЕ добавлены: контейнер не в состоянии running (иначе трафик ушёл бы в никуда)."');
+    P('  :put "Почините контейнер и запустите скрипт снова - маршруты добавятся."');
+    P('}');
+  }
+
+  if(vpnNet){
+    sec('Отдельная VPN-подсеть ' + sn.net, 'изолированная сеть со своим DHCP: всё, что в ней, ходит в интернет только через туннель.');
+    P(':do { /interface/bridge/add name=bridge-vpn comment="vless-vpn" ; :put "Создан бридж bridge-vpn" } on-error={ :put "Бридж bridge-vpn уже есть - пропускаю" }');
+    P(':if ([:len [/ip/address/find where interface="bridge-vpn"]] = 0) do={ /ip/address/add address=' + sn.gw + '/24 interface=bridge-vpn }');
+    P(':if ([:len [/ip/pool/find where name="vpn-pool"]] = 0) do={ /ip/pool/add name=vpn-pool ranges=' + sn.poolS + '-' + sn.poolE + ' }');
+    P(':if ([:len [/ip/dhcp-server/find where name="vpn-dhcp"]] = 0) do={ /ip/dhcp-server/add name=vpn-dhcp interface=bridge-vpn address-pool=vpn-pool disabled=no }');
+    P(':if ([:len [/ip/dhcp-server/network/find where address="' + sn.net + '"]] = 0) do={ /ip/dhcp-server/network/add address=' + sn.net + ' gateway=' + sn.gw + ' dns-server=1.1.1.1,8.8.8.8 }');
+    P(':put "Подсеть готова: шлюз ' + sn.gw + ', DHCP ' + sn.poolS + '-' + sn.poolE + ', DNS 1.1.1.1/8.8.8.8 (уйдут через туннель)"');
+  }
+
+  if(wifiNew){
+    sec('Wi-Fi сеть «' + wSsid + '»', 'второй SSID поверх ваших радио; подключился к нему - весь трафик через VPN. Основной Wi-Fi не меняется.');
+    P('# ВАЖНО: меню Wi-Fi зависит от прошивки: /interface/wifi (7.13+), /interface/wifiwave2 (ax 7.9-7.12),');
+    P('# /interface/wireless (старый драйвер до-ax). Обращение к ОТСУТСТВУЮЩЕМУ меню = ОШИБКА ПАРСИНГА,');
+    P('# которую :do..on-error НЕ ловит. Решение: каждый драйвер выполняем как ОТДЕЛЬНЫЙ /system/script');
+    P('# (source сохраняется без компиляции; ошибка отсутствующего меню всплывает при run и ловится on-error).');
+    P('# SSID/пароль вставлены прямо в тело скрипта (глобалы в /system/script не видны). Счётчик считаем снаружи.');
+    // блоки для wifi/wifiwave2 (новый синтаксис configuration.ssid); значения SSID/пароль инлайн в кавычках
+    const wifiDrvBlock = M =>
+      ':foreach w in=[' + M + '/find] do={ :local mn [' + M + '/get $w name] ; :local mi \"\" ; :do { :set mi [:tostr [' + M + '/get $w master-interface]] } on-error={} ; :if ([:len $mi]=0) do={ :if ([:len [' + M + '/find where name=(\"vpn-\" . $mn)]]=0) do={ :do { ' + M + '/add master-interface=$mn name=(\"vpn-\" . $mn) configuration.mode=ap configuration.ssid=\"' + wSsid + '\" security.authentication-types=wpa2-psk,wpa3-psk security.passphrase=\"' + wPass + '\" disabled=no } on-error={ :do { ' + M + '/add master-interface=$mn name=(\"vpn-\" . $mn) configuration.mode=ap configuration.ssid=\"' + wSsid + '\" security.authentication-types=wpa2-psk security.passphrase=\"' + wPass + '\" disabled=no } on-error={} } ; :do { /interface/bridge/port/add bridge=bridge-vpn interface=(\"vpn-\" . $mn) } on-error={} } } }';
+    const wirelessBlock =
+      ':do { /interface/wireless/security-profiles/add name=vpn-sec mode=dynamic-keys authentication-types=wpa2-psk unicast-ciphers=aes-ccm group-ciphers=aes-ccm wpa2-pre-shared-key=\"' + wPass + '\" } on-error={} ; :foreach w in=[/interface/wireless/find] do={ :local mn [/interface/wireless/get $w name] ; :local mi \"\" ; :do { :set mi [:tostr [/interface/wireless/get $w master-interface]] } on-error={} ; :if ([:len $mi]=0) do={ :if ([:len [/interface/wireless/find where name=(\"vpn-\" . $mn)]]=0) do={ :do { /interface/wireless/add master-interface=$mn name=(\"vpn-\" . $mn) mode=ap-bridge ssid=\"' + wSsid + '\" security-profile=vpn-sec disabled=no ; /interface/bridge/port/add bridge=bridge-vpn interface=(\"vpn-\" . $mn) } on-error={} } } }';
+    // sesc: экранирование кода для source="..." ($ и " и \). $ -> \$ чтобы $mn/$w раскрылись ВНУТРИ скрипта, а не в родителе.
+    const sesc = s => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$');
+    const wifiWrap = (nm, block, label) => {
+      P(':do { :do { /system/script/remove [find where name="' + nm + '"] } on-error={} ; /system/script/add name="' + nm + '" source="' + sesc(block) + '" ; /system/script/run ' + nm + ' ; :put "Драйвер Wi-Fi: ' + label + '" } on-error={ :put "  ' + label + ' на этой прошивке недоступен - пробую следующий" }');
+      P(':do { /system/script/remove [find where name="' + nm + '"] } on-error={}');
+    };
+    P('# 1) драйвер wifi (wifi-qcom, ROS 7.13+, hAP ax2/ax3 и новее)');
+    wifiWrap('vlwf', wifiDrvBlock('/interface/wifi'), '/interface/wifi');
+    P(':local made [:len [/interface/find where name~"^vpn-"]]');
+    P('# 2) драйвер wifiwave2 (ax на ROS 7.9-7.12) - если wifi не сработал');
+    P(':if ($made = 0) do={');
+    wifiWrap('vlww2', wifiDrvBlock('/interface/wifiwave2'), '/interface/wifiwave2');
+    P('  :set made [:len [/interface/find where name~"^vpn-"]]');
+    P('}');
+    P('# 3) старый драйвер /interface/wireless - если и wifiwave2 нет');
+    P(':if ($made = 0) do={');
+    wifiWrap('vlwl', wirelessBlock, '/interface/wireless');
+    P('  :set made [:len [/interface/find where name~"^vpn-"]]');
+    P('}');
+    P(':if ($made = 0) do={ :put "Виртуальный SSID автоматически создать не вышло (нестандартная модель/прошивка). Создайте SSID вручную и добавьте его портом в bridge-vpn." } else={ :put ("Создано Wi-Fi интерфейсов: $made, SSID: ' + wSsid + '") }');
+    P('# уборка временных глобалов');
+    P(':do { /system/script/environment/remove [find where name="wvS"] } on-error={}');
+    P(':do { /system/script/environment/remove [find where name="wvP"] } on-error={}');
+  }
+
+  if(vpnNet){
+    sec('Kill-switch для VPN-подсети', 'трафик подсети помечается и уходит в отдельную таблицу маршрутов, где единственный выход - туннель. Упал туннель - нет интернета, утечек не будет.');
+    P(':do { /routing/table/add name=vpn-rt fib } on-error={}');
+    P('# локальные сети исключаем из туннеля - доступ к роутеру/принтерам из VPN-подсети сохранится');
+    P(':do { /ip/firewall/mangle/remove [/ip/firewall/mangle/find where comment="vless-vpn-mark"] } on-error={}');
+    P(':do { /ip/firewall/mangle/remove [/ip/firewall/mangle/find where comment="vless-vpn-local"] } on-error={}');
+    P('/ip/firewall/mangle/add chain=prerouting src-address=' + sn.net + ' dst-address=10.0.0.0/8 action=accept comment="vless-vpn-local"');
+    P('/ip/firewall/mangle/add chain=prerouting src-address=' + sn.net + ' dst-address=172.16.0.0/12 action=accept comment="vless-vpn-local"');
+    P('/ip/firewall/mangle/add chain=prerouting src-address=' + sn.net + ' dst-address=192.168.0.0/16 action=accept comment="vless-vpn-local"');
+    P('/ip/firewall/mangle/add chain=prerouting src-address=' + sn.net + ' action=mark-routing new-routing-mark=vpn-rt passthrough=yes comment="vless-vpn-mark"');
+    P(':do { /ip/route/remove [/ip/route/find where comment="vless-vpn-defroute"] } on-error={}');
+    P(':if ($st = "running") do={');
+    P('  /ip/route/add dst-address=0.0.0.0/0 gateway=172.18.20.6@main routing-table=vpn-rt comment="vless-vpn-defroute"');
+    P('  :put "Kill-switch активен: подсеть ' + sn.net + ' ходит в интернет только через туннель"');
+    P('} else={');
+    P('  :put "Маршрут подсети в туннель НЕ добавлен (контейнер не running). Позже выполните:"');
+    P('  :put "/ip/route/add dst-address=0.0.0.0/0 gateway=172.18.20.6@main routing-table=vpn-rt comment=vless-vpn-defroute"');
+    P('}');
+  }
+
+  /* ----- итоговый отчёт ----- */
+  P('');
+  P(':put ""');
+  P(':put "==================== ИТОГОВЫЙ ОТЧЁТ ===================="');
+  P(':do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={}');
+  P(':if ($st = "running") do={ :put "[OK] Контейнер VLESS запущен и работает (running)" } else={ :put ("[!!] Контейнер НЕ работает (статус: $st) - см. подсказки выше и /log/print where topics~\\"container\\"") }');
+  P(':put ("[i] Туннель: veth $vethName, роутер 172.18.20.5 <-> контейнер 172.18.20.6, хранилище " . $rootDir)');
+  P(':put "[i] Firewall: MSS-клампинг + NAT (комментарии vless-sbox-...)"');
+  if(effR === 'list'){
+    P(':put ("[i] Маршрутов через VPN: " . [:len [/ip/route/find where comment="' + comment + '"]] . " (комментарий \\"' + comment + '\\"; удалить: /ip/route/remove [find comment=\\"' + comment + '\\"])")');
+  }
+  if(effR === 'all'){
+    P(':put "[i] Весь трафик роутера идёт через туннель (кроме пути до VPS; комментарии vless-wizard-...)"');
+  }
+  if(vpnNet){
+    P(':put "[i] VPN-подсеть: ' + sn.net + ' (шлюз ' + sn.gw + ', DHCP ' + sn.poolS + '-' + sn.poolE + ', kill-switch включён)"');
+  }
+  if(wifiNew){
+    P(':if ($made > 0) do={ :put ("[OK] Wi-Fi: SSID \\"' + wSsid + '\\" создан на " . $made . " радио - подключайтесь и проверяйте") } else={ :put "[!!] Wi-Fi SSID не создан - создайте вручную и добавьте портом в bridge-vpn" }');
+  }
+  if(vpnNet && !wifiNew){
+    P(':put "[i] Подключение устройств к VPN-подсети: добавьте порт в бридж, например /interface/bridge/port/add bridge=bridge-vpn interface=ether4"');
+  }
+  if(effR === 'none' && !vpnNet){
+    P(':put "[i] Маршруты не настраивались. Добавить позже: /ip/route/add dst-address=X.X.X.X/NN gateway=172.18.20.6"');
+  }
+  P(':put "[i] Проверка: с устройства, чей трафик должен идти через VPN, откройте 2ip.ru - там должен быть IP вашего VPS."');
+  P(':put "[i] Всё созданное помечено комментариями vless-... - легко найти и при необходимости удалить."');
+  P(':put "========================================================"');
+  P('}');
+
+  const scriptText = L.join('\n');
+  el('scriptOut').textContent = scriptText;
+  el('out').style.display = 'block';
+
+  // сводка на странице
+  el('reportList').innerHTML = sum.map(s => '<li>' + s.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</li>').join('');
+
+  // команды резервной копии (ручной режим)
+  lastBackupCmds = [
+    ':do { /system/backup/save name=vless-wizard-backup dont-encrypt=yes } on-error={ /system/backup/save name=vless-wizard-backup }',
+    ':do { /export show-sensitive file=vless-wizard-backup } on-error={ /export file=vless-wizard-backup }',
+    ':put "Готово: скачайте vless-wizard-backup.backup и vless-wizard-backup.rsc из Files на ПК (WinBox -> Files, перетащить)"'
+  ].join('\n');
+
+  const ps1Wrap = el('ps1Wrap');
+  const manualWrap = el('manualWrap');
+  if(imode === 'auto'){
+    lastPs1 = buildPs1({rIp, rUser, doBackup, tarName: tarNameRaw, tarUrl: tarUrlRaw});
+    lastSh = buildSh({rIp, rUser, doBackup, tarName: tarNameRaw, tarUrl: tarUrlRaw});
+    el('ps1Out').textContent = lastPs1;
+    el('shOut').textContent = lastSh;
+    el('dlPs1').style.borderColor = isWin ? 'var(--accent)' : '';
+    el('dlSh').style.borderColor = isMac ? 'var(--accent)' : '';
+    ps1Wrap.style.display = 'block';
+    manualWrap.style.display = 'none';
+  } else {
+    lastPs1 = '';
+    lastSh = '';
+    ps1Wrap.style.display = 'none';
+    el('backupOut').textContent = lastBackupCmds;
+    manualWrap.style.display = 'block';
+  }
+
+  el('out').scrollIntoView({behavior:'smooth'});
+  let gm = 'Скрипт готов - ниже сводка и файлы. Строк в .rsc: ' + L.length + '.';
+  if(imode === 'auto') gm += ' Скачайте установщик под вашу систему (' + (isMac ? 'setup.sh' : 'setup.ps1') + ') и vless-setup.rsc в одну папку и запустите установщик.';
+  else if(effR === 'list' && cidrs.length > 150) gm += ' Маршрутов много (' + cidrs.length + ') - обязательно через /import файлом, не вставкой.';
+  show('genMsg','ok', gm);
+}
+
+/* ================= PowerShell авто-установка по SSH ================= */
+function buildPs1(o){
+  const S = [];
+  const A = s => S.push(s);
+  A('# ============================================================');
+  A('#  Авто-установка MikroTik + VLESS по SSH (Windows PowerShell)');
+  A('#  Положите этот файл РЯДОМ с vless-setup.rsc и запустите его:');
+  A('#  ПКМ по файлу -> "Выполнить с помощью PowerShell".');
+  A('#  Если PowerShell блокирует запуск скриптов, откройте PowerShell и выполните:');
+  A('#    Set-ExecutionPolicy -Scope Process Bypass -Force ; .\\setup.ps1');
+  A('#  Требуется Windows 10/11 (встроенный клиент OpenSSH).');
+  A('# ============================================================');
+  A('$RouterIP = "' + o.rIp + '"');
+  A('$User     = "' + o.rUser + '"');
+  A('$RscName  = "vless-setup.rsc"');
+  A('$DoBackup = ' + (o.doBackup ? '$true' : '$false'));
+  A('$TarName  = "' + (o.tarName || '') + '"   # имя запасного .tar рядом со скриптом (пусто = стандартное)');
+  A('$TarUrl   = "' + (o.tarUrl || '') + '"    # ссылка на .tar (пусто = не качать по ссылке)');
+  A('$Image    = "wiktorbgu/vless-sing-box-tunnel-mikrotik"');
+  A('$here = Split-Path -Parent $MyInvocation.MyCommand.Path');
+  A('$Rsc  = Join-Path $here $RscName');
+  A('$dest = "${User}@${RouterIP}"');
+  A('# TLS 1.2 для скачивания пакетов (старые Windows 10 по умолчанию не умеют)');
+  A('try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072 } catch {}');
+  A('');
+  A('function Say($t){ Write-Host ""; Write-Host ("=== " + $t) -ForegroundColor Cyan }');
+  A('function Why($t){ Write-Host ("    " + $t) -ForegroundColor DarkGray }');
+  A('');
+  A('function Manual($why){');
+  A('  Write-Host "`n================ РУЧНОЙ РЕЖИМ ================" -ForegroundColor Yellow');
+  A('  Write-Host "Авто-установка остановлена: $why" -ForegroundColor Yellow');
+  A('  Write-Host "Сделайте вручную (по инструкции мастера):"');
+  A('  Write-Host " 0. Резервная копия: /system/backup/save name=vless-wizard-backup dont-encrypt=yes"');
+  A('  Write-Host "    и /export file=vless-wizard-backup ; скачайте оба файла из Files."');
+  A('  Write-Host " 1. Установите пакет container-<версия>-<arch>.npk (Files -> перезагрузка)."');
+  A('  Write-Host " 2. /system/device-mode/update container=yes  и выключите/включите питание роутера."');
+  A('  Write-Host " 3. Залейте $RscName в Files роутера и выполните:  /import $RscName verbose=yes"');
+  A('  Write-Host "=============================================="');
+  A('  Read-Host "Enter - выход"; exit 1');
+  A('}');
+  A('');
+  A('if (-not (Get-Command ssh -ErrorAction SilentlyContinue)) { Manual "не найден ssh (Settings -> Optional features -> OpenSSH Client)" }');
+  A('if (-not (Test-Path $Rsc)) { Manual "рядом нет файла $RscName - скачайте его из мастера в эту же папку" }');
+  A('');
+  A('Say "Готовлю временный SSH-ключ"');
+  A('Why "Чтобы не вводить пароль на каждом шаге. В конце ключ будет удалён с роутера."');
+  A('$keyDir = Join-Path $env:TEMP "mt_vless_key"');
+  A('New-Item -ItemType Directory -Force -Path $keyDir | Out-Null');
+  A('$key = Join-Path $keyDir "id_ed25519"');
+  A('if (-not (Test-Path $key)) {');
+  A('  $nopass = ""');
+  A('  if ($PSVersionTable.PSVersion.Major -lt 6) { $nopass = \'""\' }  # PS 5.1 "теряет" пустой аргумент');
+  A('  & ssh-keygen -q -t ed25519 -C "mt-vless-wizard" -N $nopass -f $key | Out-Null');
+  A('}');
+  A('if (-not (Test-Path "$key.pub")) { Manual "не удалось создать SSH-ключ (ssh-keygen)" }');
+  A('$opt = @("-o","StrictHostKeyChecking=no","-o","ConnectTimeout=15")');
+  A('$keyOpt = $opt + @("-i",$key)');
+  A('function RC($cmd){ (& ssh @keyOpt $dest $cmd 2>&1) }');
+  A('');
+  A('Say "Подключаюсь к роутеру $RouterIP"');
+  A('Why "Консоль 1-2 раза спросит пароль роутера - это штатный OpenSSH, пароль никуда не сохраняется."');
+  A('& scp @opt "$key.pub" "${dest}:id_wizard.pub"');
+  A('if ($LASTEXITCODE -ne 0) { Manual "не удалось подключиться по SSH. Проверьте IP/логин/пароль и что SSH включён на роутере (/ip/service/enable ssh)" }');
+  A('& ssh @opt $dest "/user/ssh-keys/import public-key-file=id_wizard.pub user=$User" | Out-Null');
+  A('');
+  A('$ver = ((RC "/system/resource/get version") -join "").Trim()');
+  A('if (-not $ver) { Manual "SSH-ключ не активировался, роутер не отвечает по ключу" }');
+  A('$arch = ((RC "/system/resource/get architecture-name") -join "").Trim()');
+  A('$board = ((RC "/system/resource/get board-name") -join "").Trim()');
+  A('$freeMB = 0');
+  A('try { $freeMB = [math]::Round([double](((RC "/system/resource/get free-hdd-space") -join "").Trim()) / 1048576) } catch {}');
+  A('Write-Host "Роутер на связи: $board | RouterOS $ver | архитектура $arch | свободно ~$freeMB МБ" -ForegroundColor Green');
+  A('if ($arch -notin @("arm","arm64","x86","x86_64")) { Manual "архитектура $arch не поддерживает контейнеры (нужна arm/arm64/x86)" }');
+  A('');
+  A('Say "Определяю модель роутера"');
+  A('Why "Найду фото модели на mikrotik.com и открою карточку роутера в браузере."');
+  A("$slug = ($board.ToLower() -replace '\\^','' -replace '[^a-z0-9]+','_').Trim('_')");
+  A("$img = ''; $prod = 'https://mikrotik.com/products?search=' + [uri]::EscapeDataString($board)");
+  A('foreach($s in @($slug, ($slug -replace "_",""))){');
+  A('  if(-not $s){ continue }');
+  A('  try{');
+  A('    $r = Invoke-WebRequest -Uri ("https://mikrotik.com/product/" + $s) -UseBasicParsing -TimeoutSec 12');
+  A("    $m = [regex]::Match($r.Content, 'property=\"og:image\"\\s+content=\"([^\"]+)\"')");
+  A("    if($m.Success -and ($m.Groups[1].Value -notmatch 'open-graph')){");
+  A("      $img = $m.Groups[1].Value -replace '_tm\\.webp','_lg.webp'");
+  A('      $prod = "https://mikrotik.com/product/" + $s');
+  A('      break');
+  A('    }');
+  A('  }catch{}');
+  A('}');
+  A("$imgTag = '<div class=noimg>фото недоступно (нет интернета или нетиповая модель)</div>'");
+  A('if($img){ $imgTag = "<img src=\'" + $img + "\' alt=\'router\'>" }');
+  A('$card = @"');
+  A("<!DOCTYPE html><html lang='ru'><head><meta charset='utf-8'><title>$board</title><style>");
+  A("body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f1420;color:#e8ecf4;font:16px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif}");
+  A('.c{max-width:600px;background:#1a2233;border:1px solid #2a3550;border-radius:16px;padding:28px;text-align:center}');
+  A('img{max-width:460px;width:100%;border-radius:10px;background:#fff;padding:10px}');
+  A('h1{margin:14px 0 4px;font-size:26px} .m{color:#8b96ad;font-size:14px;margin:4px 0 12px}');
+  A('a{color:#4f8cff} .noimg{padding:40px;border:1px dashed #2a3550;border-radius:10px;color:#8b96ad}');
+  A('</style></head><body><div class=c>$imgTag<h1>$board</h1>');
+  A('<div class=m>RouterOS $ver · $arch · свободно ~$freeMB МБ</div>');
+  A("<a href='$prod'>страница модели на mikrotik.com</a></div></body></html>");
+  A('"@');
+  A('$cardPath = Join-Path $here "router-info.html"');
+  A('Set-Content -Path $cardPath -Value $card -Encoding UTF8');
+  A('Write-Host ("Ваш роутер: " + $board) -ForegroundColor Green');
+  A('try { Start-Process $cardPath } catch {}');
+  A('');
+  A('if ($DoBackup) {');
+  A('  Say "Делаю резервную копию ДО любых изменений"');
+  A('  Why "Если что-то пойдёт не так - конфигурация вернётся из .backup (Files -> Restore). Файлы сохраню рядом с этим скриптом."');
+  A('  RC (":do { /system/backup/save name=vless-wizard-backup dont-encrypt=yes } on-error={ /system/backup/save name=vless-wizard-backup }") | Out-Null');
+  A('  RC (":do { /export show-sensitive file=vless-wizard-backup } on-error={ /export file=vless-wizard-backup }") | Out-Null');
+  A('  Start-Sleep -Seconds 3');
+  A('  & scp @keyOpt "${dest}:vless-wizard-backup.backup" $here');
+  A('  & scp @keyOpt "${dest}:vless-wizard-backup.rsc" $here');
+  A('  if (-not (Test-Path (Join-Path $here "vless-wizard-backup.backup"))) {');
+  A('    Write-Host "Не удалось скачать резервную копию!" -ForegroundColor Yellow');
+  A('    $c = Read-Host "Продолжить БЕЗ резервной копии? (введите y для продолжения)"');
+  A('    if ($c -ne "y") { Manual "остановлено: резервная копия не скачалась" }');
+  A('  } else {');
+  A('    Write-Host "Резервная копия на ПК: $here\\vless-wizard-backup.backup (+ текстовый экспорт .rsc)" -ForegroundColor Green');
+  A('  }');
+  A('}');
+  A('');
+  A('Say "Проверяю пакет container"');
+  A('Why "Контейнеры - отдельный пакет RouterOS. Его версия должна точно совпадать с версией системы ($ver) и архитектурой ($arch)."');
+  A('$hasCont = ((RC "/system/package/print count-only where name=container") -join "").Trim()');
+  A('if ($hasCont -notmatch "^[1-9]") {');
+  A('  Write-Host "Пакет не установлен - скачиваю Extra packages с download.mikrotik.com..." -ForegroundColor Cyan');
+  A('  $verNum = ([regex]::Match($ver,"^[0-9][0-9\\.]*")).Value');
+  A('  $urlArch = $arch; if ($arch -eq "x86_64") { $urlArch = "x86" }');
+  A('  $zip = Join-Path $keyDir "extra.zip"');
+  A('  $url = "https://download.mikrotik.com/routeros/$verNum/all_packages-$urlArch-$verNum.zip"');
+  A('  try { Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing } catch { Manual "не смог скачать $url - скачайте Extra packages вручную и поставьте npk" }');
+  A('  $ex = Join-Path $keyDir "extra"; Remove-Item -Recurse -Force $ex -ErrorAction SilentlyContinue');
+  A('  Expand-Archive -Path $zip -DestinationPath $ex -Force');
+  A('  $npk = Get-ChildItem -Path $ex -Filter "container-*.npk" | Select-Object -First 1');
+  A('  if (-not $npk) { Manual "в архиве не нашёлся container-*.npk" }');
+  A('  & scp @keyOpt $npk.FullName "${dest}:"');
+  A('  if ($LASTEXITCODE -ne 0) { Manual "не удалось залить npk на роутер" }');
+  A('  Write-Host "Пакет залит. Перезагружаю роутер для установки (1-2 минуты, это нормально)..." -ForegroundColor Cyan');
+  A('  RC (":execute script=`"/system/reboot`"") | Out-Null');
+  A('  Start-Sleep -Seconds 40');
+  A('  $ok = $false');
+  A('  for($i = 0; $i -lt 20; $i++){ Start-Sleep -Seconds 8; $r = ((RC "/system/resource/get version") -join "").Trim(); if ($r) { $ok = $true; break } }');
+  A('  if (-not $ok) { Manual "роутер не вернулся после перезагрузки" }');
+  A('  if ( ((RC "/system/package/print count-only where name=container") -join "").Trim() -notmatch "^[1-9]" ) { Manual "пакет container всё ещё не активен" }');
+  A('  Write-Host "Пакет container установлен." -ForegroundColor Green');
+  A('} else { Write-Host "Пакет container уже установлен - хорошо." -ForegroundColor Green }');
+  A('');
+  A('Say "Проверяю режим контейнеров (device-mode)"');
+  A('Why "Защита MikroTik: включение контейнеров подтверждается только физическим отключением питания - это нельзя сделать удалённо."');
+  A('$dm = ((RC "/system/device-mode/get container") -join "").Trim()');
+  A('if ($dm -notmatch "^(yes|true)$") {');
+  A('  RC (":execute script=`"/system/device-mode/update container=yes`"") | Out-Null');
+  A('  Write-Host ""');
+  A('  Write-Host ">>> СЕЙЧАС ВЫКЛЮЧИТЕ РОУТЕР ИЗ РОЗЕТКИ И ВКЛЮЧИТЕ ОБРАТНО (в течение 5 минут). <<<" -ForegroundColor Yellow');
+  A('  Write-Host ">>> Это единственный шаг, который нельзя сделать удалённо. Программный reboot НЕ подходит. <<<" -ForegroundColor Yellow');
+  A('  Read-Host "Когда роутер снова загрузится - нажмите Enter"');
+  A('  Start-Sleep -Seconds 10');
+  A('  $ok = $false');
+  A('  for($i = 0; $i -lt 25; $i++){ $r = ((RC "/system/resource/get version") -join "").Trim(); if ($r) { $ok = $true; break }; Start-Sleep -Seconds 6 }');
+  A('  if (-not $ok) { Manual "роутер не отвечает после включения питания" }');
+  A('  $dm = ((RC "/system/device-mode/get container") -join "").Trim()');
+  A('  if ($dm -notmatch "^(yes|true)$") { Manual "device-mode container не включился (нужно было именно отключение питания, не reboot)" }');
+  A('  Write-Host "Режим контейнеров активен." -ForegroundColor Green');
+  A('} else { Write-Host "Режим контейнеров уже активен - хорошо." -ForegroundColor Green }');
+  A('');
+  A('Say "Заливаю настройку и запускаю установку"');
+  A('Why "Скрипт выполняется на роутере через /import - надёжнее вставки в терминал и без лимита на объём."');
+  A('& scp @keyOpt $Rsc "${dest}:$RscName"');
+  A('if ($LASTEXITCODE -ne 0) { Manual "не удалось залить $RscName" }');
+  A('Write-Host "Дальше - живой лог с роутера (скачивание контейнера может идти несколько минут):" -ForegroundColor Cyan');
+  A('RC "/import $RscName verbose=yes" | ForEach-Object { Write-Host "  [router] $_" }');
+  A('');
+  A('# --- фолбэк: если после 3 попыток контейнер не поднялся, ставим из локального .tar ---');
+  A('$run = ((RC "/container/print count-only where status=running") -join "").Trim()');
+  A('if ($run -notmatch "^[1-9]") {');
+  A('  Say "Docker Hub не сработал - подключаю запасной образ (.tar)"');
+  A('  Why "Кладу готовый образ на роутер и ставлю из файла - интернет к Docker Hub больше не нужен."');
+  A('  $tar = ""');
+  A('  # имена архитектуры: RouterOS $arch + синонимы (armv7, amd64) - под любые имена зеркал');
+  A('  $aliases = @($arch)');
+  A('  if ($arch -eq "arm") { $aliases += "armv7" }');
+  A('  if ($arch -eq "x86_64" -or $arch -eq "x86") { $aliases += @("amd64","x86_64","x86") }');
+  A('  $cand = @()');
+  A('  if ($TarName) { $cand += (Join-Path $here $TarName) }');
+  A('  foreach($a in $aliases){ $cand += (Join-Path $here ("vless-container-" + $a + ".tar")) }');
+  A('  $cand += (Join-Path $here "vless-container.tar")');
+  A('  foreach($c in $cand){ if (Test-Path $c) { $tar = $c; break } }');
+  A('  if (-not $tar -and $TarUrl) {');
+  A('    # {arch} в ссылке подставляется автоматически - один линк работает для всех моделей');
+  A('    $url = $TarUrl.Replace("{arch}", $arch)');
+  A('    Write-Host "Скачиваю образ по ссылке: $url" -ForegroundColor Cyan');
+  A('    $tt = Join-Path $here ("vless-container-" + $arch + ".tar")');
+  A('    try { Invoke-WebRequest -Uri $url -OutFile $tt -UseBasicParsing; $tar = $tt } catch { Write-Host "не удалось скачать по ссылке" -ForegroundColor Yellow }');
+  A('  }');
+  A('  if (-not $tar) {');
+  A('    $eng = ""');
+  A('    if (Get-Command podman -ErrorAction SilentlyContinue) { $eng = "podman" }');
+  A('    elseif (Get-Command docker -ErrorAction SilentlyContinue) { $eng = "docker" }');
+  A('    if ($eng) {');
+  A('      $parch = $arch; if ($arch -eq "x86" -or $arch -eq "x86_64") { $parch = "amd64" }');
+  A('      $tt = Join-Path $here ("vless-container-" + $arch + ".tar")');
+  A('      Write-Host "Собираю образ через $eng (--arch=$parch), это разово..." -ForegroundColor Cyan');
+  A('      try {');
+  A('        if ($eng -eq "podman") { & podman pull --arch=$parch ("docker.io/" + $Image + ":latest"); & podman save ("docker.io/" + $Image + ":latest") -o $tt }');
+  A('        else { & docker pull --platform ("linux/" + $parch) ($Image + ":latest"); & docker save ($Image + ":latest") -o $tt }');
+  A('        if (Test-Path $tt) { $tar = $tt }');
+  A('      } catch { Write-Host "сборка через $eng не удалась" -ForegroundColor Yellow }');
+  A('    }');
+  A('  }');
+  A('  if ($tar) {');
+  A('    $tarBase = Split-Path -Leaf $tar');
+  A('    Write-Host "Заливаю $tarBase на роутер (может занять минуту)..." -ForegroundColor Cyan');
+  A('    & scp @keyOpt $tar "${dest}:$tarBase"');
+  A('    if ($LASTEXITCODE -eq 0) {');
+  A('      Write-Host "Ставлю контейнер из файла и до-настраиваю остальное:" -ForegroundColor Cyan');
+  A('      RC "/import $RscName verbose=yes" | ForEach-Object { Write-Host "  [router] $_" }');
+  A('    } else { Write-Host "не удалось залить .tar на роутер" -ForegroundColor Yellow }');
+  A('  } else {');
+  A('    Write-Host "Запасной образ не найден. Положите vless-container-$arch.tar рядом со скриптом (или укажите ссылку в мастере) и запустите снова." -ForegroundColor Yellow');
+  A('    Write-Host "Сделать образ (ПК с podman/docker): podman pull --arch=<arm64|arm|amd64> docker.io/$Image`:latest ; podman save docker.io/$Image`:latest -o vless-container-<арх>.tar"');
+  A('  }');
+  A('  $run = ((RC "/container/print count-only where status=running") -join "").Trim()');
+  A('}');
+  A('if ($run -notmatch "^[1-9]") { Write-Host "Контейнер так и не в running - см. лог выше и /log/print where topics~`"container`" (частые причины: неверный ключ vless://, нет места)." -ForegroundColor Yellow }');
+  A('');
+  A('Say "Убираю за собой"');
+  A('Why "Удаляю временный SSH-ключ с роутера - доступ по ключу больше не нужен."');
+  A('RC "/user/ssh-keys/remove [/user/ssh-keys/find where info~`"mt-vless-wizard`"]" | Out-Null');
+  A('RC "/user/ssh-keys/remove [/user/ssh-keys/find where key-owner~`"mt-vless-wizard`"]" | Out-Null');
+  A('RC "/file/remove [/file/find where name=id_wizard.pub]" | Out-Null');
+  A('');
+  A('Write-Host ""');
+  A('Write-Host "================ ГОТОВО ================" -ForegroundColor Green');
+  A('if ($DoBackup) { Write-Host "Резервная копия: $here\\vless-wizard-backup.backup (восстановить: залить в Files -> /system/backup/load)" }');
+  A('Write-Host "Итоговый отчёт со статусами - выше, в строках [router] после слов ИТОГОВЫЙ ОТЧЁТ."');
+  A('Write-Host "Проверка: с устройства, чей трафик должен идти через VPN, откройте 2ip.ru - там должен быть IP вашего VPS."');
+  A('Read-Host "Enter - выход"');
+  return S.join('\n');
+}
+
+/* ================= bash авто-установка по SSH (macOS / Linux) ================= */
+function buildSh(o){
+  const S = [];
+  const A = s => S.push(s);
+  A('#!/usr/bin/env bash');
+  A('# ============================================================');
+  A('#  Авто-установка MikroTik + VLESS по SSH (macOS / Linux)');
+  A('#  Положите этот файл РЯДОМ с vless-setup.rsc, откройте Терминал');
+  A('#  в этой папке и выполните:   bash setup.sh');
+  A('#  (ssh/scp/curl/unzip на macOS есть из коробки)');
+  A('# ============================================================');
+  A('set -u');
+  A('RouterIP="' + o.rIp + '"');
+  A('User="' + o.rUser + '"');
+  A('RscName="vless-setup.rsc"');
+  A('DoBackup=' + (o.doBackup ? '1' : '0'));
+  A('TarName="' + (o.tarName || '') + '"   # имя запасного .tar рядом со скриптом (пусто = стандартное)');
+  A('TarUrl="' + (o.tarUrl || '') + '"     # ссылка на .tar (пусто = не качать по ссылке)');
+  A('Image="wiktorbgu/vless-sing-box-tunnel-mikrotik"');
+  A('here="$(cd "$(dirname "$0")" && pwd)"');
+  A('Rsc="$here/$RscName"');
+  A('dest="$User@$RouterIP"');
+  A('');
+  A("say(){ printf '\\n\\033[36m=== %s\\033[0m\\n' \"$1\"; }");
+  A("why(){ printf '    \\033[2m%s\\033[0m\\n' \"$1\"; }");
+  A("ok(){ printf '\\033[32m%s\\033[0m\\n' \"$1\"; }");
+  A("warn(){ printf '\\033[33m%s\\033[0m\\n' \"$1\"; }");
+  A('');
+  A('manual(){');
+  A("  printf '\\n\\033[33m================ РУЧНОЙ РЕЖИМ ================\\033[0m\\n'");
+  A("  printf '\\033[33mАвто-установка остановлена: %s\\033[0m\\n' \"$1\"");
+  A('  echo "Сделайте вручную (по инструкции мастера):"');
+  A('  echo " 0. Резервная копия: /system/backup/save name=vless-wizard-backup dont-encrypt=yes"');
+  A('  echo "    и /export file=vless-wizard-backup ; скачайте оба файла из Files."');
+  A('  echo " 1. Установите пакет container-<версия>-<arch>.npk (Files -> перезагрузка)."');
+  A('  echo " 2. /system/device-mode/update container=yes и выключите/включите питание роутера."');
+  A('  echo " 3. Залейте $RscName в Files роутера и выполните: /import $RscName verbose=yes"');
+  A('  echo "=============================================="');
+  A('  read -r -p "Enter - выход" _ ; exit 1');
+  A('}');
+  A('');
+  A('command -v ssh >/dev/null 2>&1 || manual "не найден ssh"');
+  A('[ -f "$Rsc" ] || manual "рядом нет файла $RscName - скачайте его из мастера в эту же папку"');
+  A('');
+  A('say "Готовлю временный SSH-ключ"');
+  A('why "Чтобы не вводить пароль на каждом шаге. В конце ключ будет удалён с роутера."');
+  A('keyDir="${TMPDIR:-/tmp}/mt_vless_key"');
+  A('mkdir -p "$keyDir"');
+  A('key="$keyDir/id_ed25519"');
+  A('[ -f "$key" ] || ssh-keygen -q -t ed25519 -C "mt-vless-wizard" -N "" -f "$key"');
+  A('[ -f "$key.pub" ] || manual "не удалось создать SSH-ключ (ssh-keygen)"');
+  A('opt=(-o StrictHostKeyChecking=no -o ConnectTimeout=15)');
+  A('keyOpt=("${opt[@]}" -i "$key")');
+  A('rc(){ ssh "${keyOpt[@]}" "$dest" "$1" 2>&1; }');
+  A("g1(){ rc \"$1\" | tr -d '\\r' | head -n 1; }");
+  A('');
+  A('say "Подключаюсь к роутеру $RouterIP"');
+  A('why "Терминал 1-2 раза спросит пароль роутера - это штатный OpenSSH, пароль никуда не сохраняется."');
+  A('scp "${opt[@]}" "$key.pub" "$dest:id_wizard.pub" || manual "не удалось подключиться по SSH. Проверьте IP/логин/пароль и что SSH включён (/ip/service/enable ssh)"');
+  A('ssh "${opt[@]}" "$dest" "/user/ssh-keys/import public-key-file=id_wizard.pub user=$User" >/dev/null 2>&1');
+  A('');
+  A('ver="$(g1 "/system/resource/get version")"');
+  A('[ -n "$ver" ] || manual "SSH-ключ не активировался, роутер не отвечает по ключу"');
+  A('arch="$(g1 "/system/resource/get architecture-name")"');
+  A('board="$(g1 "/system/resource/get board-name")"');
+  A('freeB="$(g1 "/system/resource/get free-hdd-space")"');
+  A('case "$freeB" in (*[!0-9]*|"") freeMB=0;; (*) freeMB=$((freeB/1048576));; esac');
+  A('ok "Роутер на связи: $board | RouterOS $ver | архитектура $arch | свободно ~$freeMB МБ"');
+  A('case "$arch" in (arm|arm64|x86|x86_64) : ;; (*) manual "архитектура $arch не поддерживает контейнеры (нужна arm/arm64/x86)";; esac');
+  A('');
+  A('say "Определяю модель роутера"');
+  A('why "Найду фото модели на mikrotik.com и открою карточку роутера в браузере."');
+  A("slug=\"$(printf '%s' \"$board\" | tr '[:upper:]' '[:lower:]' | sed -e 's/\\^//g' -e 's/[^a-z0-9]\\{1,\\}/_/g' -e 's/^_//' -e 's/_$//')\"");
+  A('img=""');
+  A('prod="https://mikrotik.com/products?search=$slug"');
+  A('for s in "$slug" "$(printf \'%s\' "$slug" | tr -d \'_\')"; do');
+  A('  [ -n "$s" ] || continue');
+  A('  page="$(curl -fsSL --max-time 12 "https://mikrotik.com/product/$s" 2>/dev/null)" || continue');
+  A('  i="$(printf \'%s\' "$page" | grep -o \'property="og:image" content="[^"]*"\' | head -n 1 | sed -e \'s/.*content="//\' -e \'s/"$//\')"');
+  A('  case "$i" in (*open-graph*) i="";; esac');
+  A('  if [ -n "$i" ]; then img="${i/_tm.webp/_lg.webp}"; prod="https://mikrotik.com/product/$s"; break; fi');
+  A('done');
+  A('imgTag="<div class=noimg>фото недоступно (нет интернета или нетиповая модель)</div>"');
+  A('[ -n "$img" ] && imgTag="<img src=\'$img\' alt=\'router\'>"');
+  A('cat > "$here/router-info.html" <<HTML');
+  A("<!DOCTYPE html><html lang='ru'><head><meta charset='utf-8'><title>$board</title><style>");
+  A("body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f1420;color:#e8ecf4;font:16px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif}");
+  A('.c{max-width:600px;background:#1a2233;border:1px solid #2a3550;border-radius:16px;padding:28px;text-align:center}');
+  A('img{max-width:460px;width:100%;border-radius:10px;background:#fff;padding:10px}');
+  A('h1{margin:14px 0 4px;font-size:26px} .m{color:#8b96ad;font-size:14px;margin:4px 0 12px}');
+  A('a{color:#4f8cff} .noimg{padding:40px;border:1px dashed #2a3550;border-radius:10px;color:#8b96ad}');
+  A('</style></head><body><div class=c>$imgTag<h1>$board</h1>');
+  A('<div class=m>RouterOS $ver · $arch · свободно ~$freeMB МБ</div>');
+  A("<a href='$prod'>страница модели на mikrotik.com</a></div></body></html>");
+  A('HTML');
+  A('ok "Ваш роутер: $board"');
+  A('( open "$here/router-info.html" 2>/dev/null || xdg-open "$here/router-info.html" 2>/dev/null ) &');
+  A('');
+  A('if [ "$DoBackup" = "1" ]; then');
+  A('  say "Делаю резервную копию ДО любых изменений"');
+  A('  why "Если что-то пойдёт не так - конфигурация вернётся из .backup (Files -> Restore). Файлы сохраню рядом со скриптом."');
+  A("  rc ':do { /system/backup/save name=vless-wizard-backup dont-encrypt=yes } on-error={ /system/backup/save name=vless-wizard-backup }' >/dev/null");
+  A("  rc ':do { /export show-sensitive file=vless-wizard-backup } on-error={ /export file=vless-wizard-backup }' >/dev/null");
+  A('  sleep 3');
+  A('  scp "${keyOpt[@]}" "$dest:vless-wizard-backup.backup" "$here/" || true');
+  A('  scp "${keyOpt[@]}" "$dest:vless-wizard-backup.rsc" "$here/" || true');
+  A('  if [ ! -f "$here/vless-wizard-backup.backup" ]; then');
+  A('    warn "Не удалось скачать резервную копию!"');
+  A('    read -r -p "Продолжить БЕЗ резервной копии? (введите y для продолжения) " c');
+  A('    [ "$c" = "y" ] || manual "остановлено: резервная копия не скачалась"');
+  A('  else');
+  A('    ok "Резервная копия на ПК: $here/vless-wizard-backup.backup (+ текстовый экспорт .rsc)"');
+  A('  fi');
+  A('fi');
+  A('');
+  A('say "Проверяю пакет container"');
+  A('why "Контейнеры - отдельный пакет RouterOS. Его версия должна точно совпадать с версией системы и архитектурой."');
+  A('hasCont="$(g1 "/system/package/print count-only where name=container")"');
+  A('case "$hasCont" in');
+  A('  ([1-9]*) ok "Пакет container уже установлен - хорошо." ;;');
+  A('  (*)');
+  A('  echo "Пакет не установлен - скачиваю Extra packages с download.mikrotik.com..."');
+  A('  command -v curl >/dev/null 2>&1 || manual "не найден curl"');
+  A('  command -v unzip >/dev/null 2>&1 || manual "не найден unzip"');
+  A("  verNum=\"$(printf '%s' \"$ver\" | grep -o '^[0-9][0-9.]*')\"");
+  A('  urlArch="$arch"; [ "$arch" = "x86_64" ] && urlArch="x86"');
+  A('  curl -fLo "$keyDir/extra.zip" "https://download.mikrotik.com/routeros/$verNum/all_packages-$urlArch-$verNum.zip" || manual "не смог скачать all_packages-$urlArch-$verNum.zip - скачайте Extra packages вручную и поставьте npk"');
+  A('  rm -rf "$keyDir/extra"; mkdir -p "$keyDir/extra"');
+  A('  unzip -o -q "$keyDir/extra.zip" -d "$keyDir/extra" || manual "не смог распаковать архив пакетов"');
+  A('  npk="$(ls "$keyDir/extra"/container-*.npk 2>/dev/null | head -n 1)"');
+  A('  [ -n "$npk" ] || manual "в архиве не нашёлся container-*.npk"');
+  A('  scp "${keyOpt[@]}" "$npk" "$dest:" || manual "не удалось залить npk на роутер"');
+  A('  echo "Пакет залит. Перезагружаю роутер для установки (1-2 минуты, это нормально)..."');
+  A('  rc \':execute script="/system/reboot"\' >/dev/null');
+  A('  sleep 40');
+  A('  okBoot=0; n=0');
+  A('  while [ $n -lt 20 ]; do sleep 8; r="$(g1 "/system/resource/get version")"; if [ -n "$r" ]; then okBoot=1; break; fi; n=$((n+1)); done');
+  A('  [ "$okBoot" = "1" ] || manual "роутер не вернулся после перезагрузки"');
+  A('  case "$(g1 "/system/package/print count-only where name=container")" in ([1-9]*) : ;; (*) manual "пакет container всё ещё не активен";; esac');
+  A('  ok "Пакет container установлен."');
+  A('  ;;');
+  A('esac');
+  A('');
+  A('say "Проверяю режим контейнеров (device-mode)"');
+  A('why "Защита MikroTik: включение контейнеров подтверждается только физическим отключением питания - это нельзя сделать удалённо."');
+  A('dm="$(g1 "/system/device-mode/get container")"');
+  A('case "$dm" in');
+  A('  (yes|true) ok "Режим контейнеров уже активен - хорошо." ;;');
+  A('  (*)');
+  A('  rc \':execute script="/system/device-mode/update container=yes"\' >/dev/null');
+  A("  printf '\\n\\033[33m>>> СЕЙЧАС ВЫКЛЮЧИТЕ РОУТЕР ИЗ РОЗЕТКИ И ВКЛЮЧИТЕ ОБРАТНО (в течение 5 минут). <<<\\033[0m\\n'");
+  A("  printf '\\033[33m>>> Это единственный шаг, который нельзя сделать удалённо. Программный reboot НЕ подходит. <<<\\033[0m\\n'");
+  A('  read -r -p "Когда роутер снова загрузится - нажмите Enter" _');
+  A('  sleep 10');
+  A('  okBoot=0; n=0');
+  A('  while [ $n -lt 25 ]; do r="$(g1 "/system/resource/get version")"; if [ -n "$r" ]; then okBoot=1; break; fi; sleep 6; n=$((n+1)); done');
+  A('  [ "$okBoot" = "1" ] || manual "роутер не отвечает после включения питания"');
+  A('  case "$(g1 "/system/device-mode/get container")" in (yes|true) : ;; (*) manual "device-mode container не включился (нужно было именно отключение питания, не reboot)";; esac');
+  A('  ok "Режим контейнеров активен."');
+  A('  ;;');
+  A('esac');
+  A('');
+  A('say "Заливаю настройку и запускаю установку"');
+  A('why "Скрипт выполняется на роутере через /import - надёжнее вставки в терминал и без лимита на объём."');
+  A('scp "${keyOpt[@]}" "$Rsc" "$dest:$RscName" || manual "не удалось залить $RscName"');
+  A('echo "Дальше - живой лог с роутера (скачивание контейнера может идти несколько минут):"');
+  A("rc \"/import $RscName verbose=yes\" | sed 's/^/  [router] /'");
+  A('');
+  A('# --- фолбэк: если после 3 попыток контейнер не поднялся, ставим из локального .tar ---');
+  A('run="$(g1 "/container/print count-only where status=running")"');
+  A('case "$run" in');
+  A('  ([1-9]*) : ;;');
+  A('  (*)');
+  A('  say "Docker Hub не сработал - подключаю запасной образ (.tar)"');
+  A('  why "Кладу готовый образ на роутер и ставлю из файла - интернет к Docker Hub больше не нужен."');
+  A('  tar=""');
+  A('  aliases="$arch"');
+  A('  [ "$arch" = "arm" ] && aliases="$aliases armv7"');
+  A('  { [ "$arch" = "x86_64" ] || [ "$arch" = "x86" ]; } && aliases="$aliases amd64 x86_64 x86"');
+  A('  for c in "$TarName" $(for a in $aliases; do echo "vless-container-$a.tar"; done) "vless-container.tar"; do');
+  A('    [ -n "$c" ] || continue');
+  A('    if [ -f "$here/$c" ]; then tar="$here/$c"; break; fi');
+  A('  done');
+  A('  if [ -z "$tar" ] && [ -n "$TarUrl" ]; then');
+  A('    url="${TarUrl//\\{arch\\}/$arch}"   # {arch} подставляется - один линк на все модели');
+  A('    echo "Скачиваю образ по ссылке: $url"');
+  A('    if curl -fLo "$here/vless-container-$arch.tar" "$url"; then tar="$here/vless-container-$arch.tar"; else warn "не удалось скачать по ссылке"; fi');
+  A('  fi');
+  A('  if [ -z "$tar" ]; then');
+  A('    eng=""');
+  A('    command -v podman >/dev/null 2>&1 && eng="podman"');
+  A('    [ -z "$eng" ] && command -v docker >/dev/null 2>&1 && eng="docker"');
+  A('    if [ -n "$eng" ]; then');
+  A('      parch="$arch"; { [ "$arch" = "x86" ] || [ "$arch" = "x86_64" ]; } && parch="amd64"');
+  A('      tt="$here/vless-container-$arch.tar"');
+  A('      echo "Собираю образ через $eng (--arch=$parch), это разово..."');
+  A('      if [ "$eng" = "podman" ]; then');
+  A('        podman pull --arch="$parch" "docker.io/$Image:latest" && podman save "docker.io/$Image:latest" -o "$tt" && tar="$tt"');
+  A('      else');
+  A('        docker pull --platform "linux/$parch" "$Image:latest" && docker save "$Image:latest" -o "$tt" && tar="$tt"');
+  A('      fi');
+  A('    fi');
+  A('  fi');
+  A('  if [ -n "$tar" ] && [ -f "$tar" ]; then');
+  A('    tarBase="$(basename "$tar")"');
+  A('    echo "Заливаю $tarBase на роутер (может занять минуту)..."');
+  A('    if scp "${keyOpt[@]}" "$tar" "$dest:$tarBase"; then');
+  A('      echo "Ставлю контейнер из файла и до-настраиваю остальное:"');
+  A("      rc \"/import $RscName verbose=yes\" | sed 's/^/  [router] /'");
+  A('    else warn "не удалось залить .tar на роутер"; fi');
+  A('  else');
+  A('    warn "Запасной образ не найден. Положите vless-container-$arch.tar рядом со скриптом (или укажите ссылку в мастере) и запустите снова."');
+  A('    echo "Сделать образ (ПК с podman/docker): podman pull --arch=<arm64|arm|amd64> docker.io/$Image:latest ; podman save docker.io/$Image:latest -o vless-container-<арх>.tar"');
+  A('  fi');
+  A('  run="$(g1 "/container/print count-only where status=running")"');
+  A('  ;;');
+  A('esac');
+  A('case "$run" in ([1-9]*) : ;; (*) warn "Контейнер так и не в running - см. лог выше и /log/print where topics~\\"container\\" (частые причины: неверный ключ vless://, нет места)";; esac');
+  A('');
+  A('say "Убираю за собой"');
+  A('why "Удаляю временный SSH-ключ с роутера - доступ по ключу больше не нужен."');
+  A('rc \'/user/ssh-keys/remove [/user/ssh-keys/find where info~"mt-vless-wizard"]\' >/dev/null 2>&1');
+  A('rc \'/user/ssh-keys/remove [/user/ssh-keys/find where key-owner~"mt-vless-wizard"]\' >/dev/null 2>&1');
+  A('rc \'/file/remove [/file/find where name=id_wizard.pub]\' >/dev/null 2>&1');
+  A('');
+  A("printf '\\n\\033[32m================ ГОТОВО ================\\033[0m\\n'");
+  A('[ "$DoBackup" = "1" ] && echo "Резервная копия: $here/vless-wizard-backup.backup (восстановить: залить в Files -> /system/backup/load)"');
+  A('echo "Итоговый отчёт со статусами - выше, в строках [router] после слов ИТОГОВЫЙ ОТЧЁТ."');
+  A('echo "Проверка: с устройства, чей трафик должен идти через VPN, откройте 2ip.ru - там должен быть IP вашего VPS."');
+  A('read -r -p "Enter - выход" _');
+  return S.join('\n');
+}
+
+/* ================= встроенный мини-DomainMapper ================= */
+const DM_PLATFORMDB = 'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/main/platformdb';
+const DM_FALLBACK = {
+  'Youtube':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-youtube.txt',
+  'Google':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-google.txt',
+  'Instagram':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-instagram.txt',
+  'Facebook':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-facebook.txt',
+  'Twitter':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-twitter.txt',
+  'Tik-Tok':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-tiktok.txt',
+  'Netflix':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-netflix.txt',
+  'Discord':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-discord.txt',
+  'Telegram':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-telegram.txt',
+  'Twitch':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-twitch.txt',
+  'Openai':'https://raw.githubusercontent.com/Ground-Zerro/DomainMapper/refs/heads/main/platforms/dns-openai.txt'
+};
+const CF_CDN = ['173.245.48.0/20','103.21.244.0/22','103.22.200.0/22','103.31.4.0/22','141.101.64.0/18','108.162.192.0/18','190.93.240.0/20','188.114.96.0/20','197.234.240.0/22','198.41.128.0/17','162.158.0.0/15','104.16.0.0/13','104.24.0.0/14','172.64.0.0/13','131.0.72.0/22'];
+// сервисы-продукты Meta (признана экстремистской организацией на территории РФ)
+const META_SVC = ['instagram','facebook','meta','threads'];
+let dmServices = null, dmCancel = false;
+
+document.getElementById('dmBox').addEventListener('toggle', e => {
+  if(e.target.open && !dmServices) dmLoadServices();
+});
+
+function isMetaSvc(name){ return META_SVC.some(m => name.toLowerCase().includes(m)); }
+
+function loadDomFile(inp){
+  const f = inp.files && inp.files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const cur = el('customDomains').value.trim();
+    el('customDomains').value = (cur ? cur + '\n' : '') + rd.result;
+    show('dmMsg','ok','Файл «' + f.name + '» загружен в поле своих доменов.');
+  };
+  rd.readAsText(f);
+  inp.value = '';
+}
+
+function updateMetaDisclaimer(){
+  const picked = [...document.querySelectorAll('.svc:checked')].map(c => c.value);
+  const hasMeta = picked.some(isMetaSvc);
+  if(hasMeta){
+    show('metaDisc','warn','⚠ Instagram, Facebook и Threads — продукты компании Meta, признанной экстремистской организацией на территории РФ. Добавляя эти списки, вы подтверждаете, что не планируете использовать маршрутизацию к этим ресурсам на территории РФ.');
+  } else hide('metaDisc');
+}
+
+async function dmLoadServices(){
+  const grid = el('svcGrid');
+  try{
+    const r = await fetch(DM_PLATFORMDB, {cache:'no-cache'});
+    if(!r.ok) throw 0;
+    const txt = await r.text();
+    dmServices = {};
+    for(const line of txt.split('\n')){
+      const m = line.match(/^(.+?):\s+(https?:\/\/\S+)/);
+      if(m) dmServices[m[1].trim()] = m[2].trim();
+    }
+    if(!Object.keys(dmServices).length) throw 0;
+  }catch(e){
+    dmServices = DM_FALLBACK;
+    show('dmMsg','warn','Не удалось загрузить актуальный список сервисов из репозитория DomainMapper — использую встроенный набор.');
+  }
+  grid.innerHTML = '';
+  for(const name of Object.keys(dmServices)){
+    const big = /antifilter|itdog/i.test(name);
+    const meta = isMetaSvc(name);
+    const lb = document.createElement('label'); lb.className = 'chk';
+    lb.innerHTML = '<input type="checkbox" class="svc" value="' + name + '"> ' + name +
+      (big ? ' <span style="color:var(--warn)">(большой)</span>' : '') +
+      (meta ? ' <span style="color:var(--err)">*</span>' : '');
+    grid.appendChild(lb);
+  }
+  grid.querySelectorAll('.svc').forEach(c => c.addEventListener('change', updateMetaDisclaimer));
+}
+
+function isIp4(s){ return /^(\d{1,3}\.)/.test(s) && /^(\d{1,3}\.){3}\d{1,3}$/.test(s) && s.split('.').every(o => +o <= 255); }
+function aggCidr(ip, bits){
+  const p = ip.split('.');
+  if(bits === 16) return p[0] + '.' + p[1] + '.0.0/16';
+  if(bits === 24) return p[0] + '.' + p[1] + '.' + p[2] + '.0/24';
+  return ip + '/32';
+}
+
+async function dohResolve(domain, prov, timeoutMs){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try{
+    const url = (prov === 'cf')
+      ? 'https://cloudflare-dns.com/dns-query?type=A&name=' + encodeURIComponent(domain)
+      : 'https://dns.google/resolve?type=A&name=' + encodeURIComponent(domain);
+    const opt = {signal: ctl.signal};
+    if(prov === 'cf') opt.headers = {'accept':'application/dns-json'};
+    const r = await fetch(url, opt);
+    if(!r.ok) throw 0;
+    const j = await r.json();
+    return (j.Answer || []).filter(a => a.type === 1).map(a => a.data).filter(isIp4);
+  } finally { clearTimeout(t); }
+}
+
+async function dmCollect(){
+  hide('dmMsg');
+  const picked = [...document.querySelectorAll('.svc:checked')].map(c => c.value);
+  const provs = [];
+  if(el('dohCf').checked) provs.push('cf');
+  if(el('dohGg').checked) provs.push('gg');
+  const wantCdn = el('addCfCdn').checked;
+  const hasCustom = (el('customDomains').value || '').trim().length > 0;
+  if(!picked.length && !wantCdn && !hasCustom){ show('dmMsg','err','Отметьте сервис, добавьте свой список доменов или включите CDN Cloudflare.'); return; }
+  if((picked.length || hasCustom) && !provs.length){ show('dmMsg','err','Выберите хотя бы один DNS-резолвер для резолвинга доменов.'); return; }
+  const aggBits = +qval('agg');
+
+  dmCancel = false;
+  el('dmRun').style.display = 'none';
+  el('dmStop').style.display = 'inline-block';
+  el('dmProg').style.display = 'block';
+  const ptext = el('ptext'), pfill = el('pfill');
+  const setP = (frac, txt) => { pfill.style.width = Math.round(frac*100) + '%'; ptext.textContent = txt; };
+
+  try{
+    // 1. скачиваем списки доменов
+    setP(0, 'Скачиваю списки доменов…');
+    const domains = new Set(), directCidrs = new Set(), failedLists = [];
+    let skippedNonAscii = 0;
+    // свои домены/подсети из поля пользователя
+    for(let line of (el('customDomains').value || '').split('\n')){
+      line = line.trim().replace(/^\*\./,'').replace(/\s*#.*$/,'');
+      if(!line) continue;
+      const cm = line.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?:\/(\d{1,2}))?$/);
+      if(cm){ directCidrs.add(normCidr(cm[2] ? line : line + '/32')); continue; }
+      if(/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(line)) domains.add(line.toLowerCase());
+    }
+    await Promise.all(picked.map(async name => {
+      try{
+        const r = await fetch(dmServices[name], {cache:'no-cache'});
+        if(!r.ok) throw 0;
+        const txt = await r.text();
+        for(let line of txt.split('\n')){
+          line = line.trim().replace(/^\*\./,'').replace(/\s*#.*$/,'');
+          if(!line) continue;
+          const cm = line.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?:\/(\d{1,2}))?$/);
+          if(cm){ directCidrs.add(normCidr(cm[2] ? line : line + '/32')); continue; }
+          if(/[^\x00-\x7F]/.test(line)){ skippedNonAscii++; continue; }
+          if(/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(line)) domains.add(line.toLowerCase());
+        }
+      }catch(e){ failedLists.push(name); }
+    }));
+    if(!domains.size && !directCidrs.size && !wantCdn){
+      show('dmMsg','err','Не удалось скачать ни одного списка' + (failedLists.length ? ' (' + failedLists.join(', ') + ')' : '') + '. Проверьте интернет или вставьте подсети вручную.');
+      return;
+    }
+    const list = [...domains];
+    if(list.length > 4000 && !confirm('В выбранных списках ' + list.length + ' доменов — сборка может занять 5–15 минут. Продолжить?')) return;
+
+    // 2. резолвим через DoH пулом
+    const ips = new Set();
+    let done = 0, failed = 0;
+    const CONC = 48, T0 = Date.now();
+    let idx = 0;
+    async function worker(wi){
+      while(idx < list.length && !dmCancel){
+        const my = idx++;
+        const d = list[my];
+        const p1 = provs[my % provs.length];
+        try{
+          (await dohResolve(d, p1, 5000)).forEach(ip => ips.add(ip));
+        }catch(e){
+          const p2 = provs.find(p => p !== p1);
+          if(p2){ try{ (await dohResolve(d, p2, 5000)).forEach(ip => ips.add(ip)); }catch(e2){ failed++; } }
+          else failed++;
+        }
+        done++;
+        if(done % 25 === 0 || done === list.length){
+          const rate = done / ((Date.now() - T0) / 1000);
+          const eta = rate > 0 ? Math.round((list.length - done) / rate) : 0;
+          setP(done / Math.max(list.length,1), 'Резолвлю: ' + done + ' / ' + list.length + ' доменов · IP найдено: ' + ips.size + ' · осталось ~' + eta + ' сек');
+        }
+      }
+    }
+    if(list.length) await Promise.all(Array.from({length: Math.min(CONC, list.length)}, (_, i) => worker(i)));
+
+    // 3. агрегация и слияние с textarea
+    const subnets = new Set();
+    ips.forEach(ip => subnets.add(aggCidr(ip, aggBits)));
+    directCidrs.forEach(c => subnets.add(c));
+    if(wantCdn) CF_CDN.forEach(c => subnets.add(c));
+    extractCidrs(el('subnets').value).forEach(c => subnets.add(c));
+    const sorted = [...subnets].sort((a,b) => ipVal(a) - ipVal(b));
+    el('subnets').value = sorted.join('\n');
+    if(qval('netmode') === 'existing'){
+      document.querySelector('input[name=rmode][value=list]').checked = true;
+    } else {
+      el('chkExtra').checked = true;
+    }
+    updateUI();
+    const cEl = el('routeComment');
+    if(picked.length && (cEl.value === 'VPN-YouTube' || !cEl.value)) cEl.value = 'VPN-' + picked[0].replace(/\s+/g,'');
+    let msg = (dmCancel ? 'Остановлено досрочно. ' : 'Готово! ') + 'Подсетей в списке: <b>' + sorted.length + '</b> (IP: ' + ips.size + ', доменов обработано: ' + done + ')';
+    if(failed) msg += ' · не разрезолвилось: ' + failed;
+    if(failedLists.length) msg += ' · списки не скачались: ' + failedLists.join(', ');
+    if(skippedNonAscii) msg += ' · пропущено не-ASCII доменов: ' + skippedNonAscii;
+    show('dmMsg', failedLists.length ? 'warn' : 'ok', msg);
+  } finally {
+    el('dmRun').style.display = 'inline-block';
+    el('dmStop').style.display = 'none';
+    el('dmProg').style.display = 'none';
+  }
+}
+
+/* ================= копирование / скачивание ================= */
+function copyText(t, btnId, okLabel, backLabel){
+  const b = el(btnId);
+  const done = () => { b.textContent = okLabel; setTimeout(() => b.textContent = backLabel, 2000); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+}
+function copyScript(){ copyText(el('scriptOut').textContent, 'copyBtn', '✓ Скопировано', '📋 Скопировать .rsc'); }
+function copyBackup(){ copyText(lastBackupCmds, 'copyBkBtn', '✓ Скопировано', '📋 Скопировать команды бэкапа'); }
+function fallbackCopy(t, done){
+  const ta = document.createElement('textarea');
+  ta.value = t; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){}
+  document.body.removeChild(ta);
+}
+function saveBlob(text, name){
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function downloadScript(){ saveBlob(el('scriptOut').textContent, 'vless-setup.rsc'); }
+// BOM обязателен: Windows PowerShell 5.1 читает UTF-8 корректно только с BOM (иначе кириллица превратится в кракозябры)
+function downloadPs1(){ saveBlob('\uFEFF' + lastPs1, 'setup.ps1'); }
+// а bash наоборот не переносит BOM (сломается shebang) — сохраняем без него
+function downloadSh(){ saveBlob(lastSh, 'setup.sh'); }
+</script>
+</body>
+</html>
