@@ -407,6 +407,7 @@ function parseVlessLink(link){
     fp: p.get('fp') || 'chrome',
     security: p.get('security') || '',
     type: p.get('type') || '',
+    alpn: (p.get('alpn') || '').replace(/[^A-Za-z0-9.,/-]/g, ''),
     name: m[5] ? decodeURIComponent(m[5]) : ''
   };
 }
@@ -629,7 +630,19 @@ function generate(){
   const safe = s => String(s || '').replace(/[\r\n\t"`$\\]/g, '').trim();
   const userTar = rq(el('tarName').value);      // для подстановки в .rsc
   const tarNameRaw = safe(el('tarName').value); // для установщиков
-  const tarUrlRaw = safe(el('tarUrl').value);
+  let tarUrlRaw = safe(el('tarUrl').value);
+
+  // === ОПРЕДЕЛЕНИЕ ТИПА КЛЮЧА: Reality vs TLS/подписка ===
+  // Reality — есть public_key (pbk) или security=reality. Иначе — TLS (нужен патченный образ).
+  const ckey = (chosen >= 0 && parsedKeys[chosen]) ? parsedKeys[chosen] : {};
+  const isReality = (ckey.security === 'reality') || (!!pbk && pbk.length > 0);
+  const keyAlpn = envq(ckey.alpn || '');
+  // имя файла образа и резервный URL зависят от типа: original vs tls-патченный
+  const imgInfix = isReality ? '' : 'tls-';   // vless-container-[tls-]<arch>.tar
+  // если пользователь оставил стандартный резервный URL, а ключ TLS — подставляем tls-версию файла
+  if(!isReality && tarUrlRaw && /vless-container-\{arch\}\.tar/.test(tarUrlRaw)){
+    tarUrlRaw = tarUrlRaw.replace('vless-container-{arch}.tar', 'vless-container-tls-{arch}.tar');
+  }
 
   /* ----- сводка (для страницы и шапки скрипта; без экранирования) ----- */
   const un = s => String(s).replace(/\\(["$\\])/g, '$1');
@@ -774,13 +787,32 @@ function generate(){
   P(':put ("Синтаксис переменных на этой прошивке: " . $ep . "=vless")');
   P('# чистим прежние наши переменные (через :parse, т.к. find where зависит от имени параметра)');
   P(':do { :local f [:parse ("/container/envs/remove [/container/envs/find where " . $ep . "=vless]")] ; $f } on-error={}');
-  const envsAll = [['REMOTE_ADDRESS',addr],['REMOTE_PORT',port],['ID',uuid],['FLOW',flow],['FINGER_PRINT',fp],['SERVER_NAME',sni],['PUBLIC_KEY',pbk],['SHORT_ID',sid]];
-  for(const [k,v] of envsAll){
+  // REMOTE_ADDRESS: для TLS-ключа с доменом резолвим домен в IP прямо на роутере.
+  // Иначе sing-box в TLS-режиме зацикливает DNS-запрос сервера через ещё не поднятый туннель.
+  const addrIsDomain = !/^\d{1,3}(\.\d{1,3}){3}$/.test(addr.replace(/\\/g,''));
+  if(!isReality && addrIsDomain){
+    P(':local srvAddr "' + envq(addr) + '"');
+    P(':do { :set srvAddr [:tostr [:resolve "' + envq(addr) + '"]] ; :put ("TLS-режим: домен сервера резолвлен в IP " . $srvAddr . " (контейнер подключится по IP, SNI останется доменом - обход DNS-петли)") } on-error={ :put "Резолв домена сервера не удался - оставляю домен (возможна DNS-петля в TLS-режиме)" }');
+    P(':do { :local f [:parse ("/container/envs/add " . $ep . "=vless key=REMOTE_ADDRESS value=\\"" . $srvAddr . "\\"")] ; $f } on-error={ :put "не добавилась env: REMOTE_ADDRESS" }');
+  } else {
+    P(':do { :local f [:parse ("/container/envs/add " . $ep . "=vless key=REMOTE_ADDRESS value=\\"' + envq(addr) + '\\"")] ; $f } on-error={ :put "не добавилась env: REMOTE_ADDRESS" }');
+  }
+  const envsRest = [['REMOTE_PORT',port],['ID',uuid],['FLOW',flow],['FINGER_PRINT',fp],['SERVER_NAME',sni],['PUBLIC_KEY',pbk],['SHORT_ID',sid]];
+  for(const [k,v] of envsRest){
     P(':do { :local f [:parse ("/container/envs/add " . $ep . "=vless key=' + k + ' value=\\"' + envq(v) + '\\"")] ; $f } on-error={ :put "не добавилась env: ' + k + '" }');
   }
-  P(':put "8 переменных окружения добавлены"');
+  // ALPN — только для TLS-ключа (патченный образ читает эту переменную)
+  if(!isReality && keyAlpn){
+    P(':do { :local f [:parse ("/container/envs/add " . $ep . "=vless key=ALPN value=\\"' + keyAlpn + '\\"")] ; $f } on-error={}');
+    P(':put "ALPN добавлен (' + keyAlpn + ') - для TLS-режима"');
+  }
+  P(':put "Переменные окружения добавлены (' + (isReality ? 'режим Reality' : 'режим TLS') + ')"');
 
-  sec('Контейнер: установка', 'сначала пробую локальный .tar (если он на роутере); иначе качаю с Docker Hub - до 3 попыток; если и это не вышло - подскажу, как поставить из файла.');
+  sec('Контейнер: установка (' + (isReality ? 'образ Reality' : 'образ с поддержкой TLS') + ')',
+    isReality ? 'ключ Reality - оригинальный образ автора; сначала локальный .tar, иначе Docker Hub (3 попытки).'
+              : 'ключ TLS/подписка - нужен патченный образ (в Docker Hub только Reality-версия), ставлю из локального .tar / GitHub.');
+  P('# Тип ключа определён мастером: ' + (isReality ? 'Reality (есть public_key)' : 'TLS/подписка (public_key пуст)'));
+  P(':put "' + (isReality ? 'Ключ Reality → оригинальный образ автора (wiktorbgu, Reality)' : 'Ключ TLS/подписка → образ с поддержкой TLS (reality отключён, alpn из ключа)') + '"');
   P(':local cimg "wiktorbgu/vless-sing-box-tunnel-mikrotik"');
   P(':local parch $arch');
   P(':if (($arch = "x86_64") or ($arch = "x86")) do={ :set parch "amd64" }');
@@ -799,27 +831,36 @@ function generate(){
   P('  :local w 0');
   P('  :while ($w < 300) do={ :delay 10s ; :set w ($w + 10) ; :do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={ :set st "" } ; :put ("  распаковка из файла: $st, $w сек") ; :if (($st = "stopped") or ($st = "running") or ($st = "error")) do={ :set w 300 } }');
   P('} else={');
-  P('  :put "Локального образа нет - качаю с Docker Hub (до 3 попыток)..."');
-  P('  :local done false');
-  P('  :for att from=1 to=3 do={');
-  P('    :if (!$done) do={');
-  P('      :put ("  === попытка $att из 3 ===")');
-  P('      :do { :foreach i in=[/container/find where root-dir=$rootDir] do={ :do { /container/stop $i ; :delay 2s } on-error={} ; /container/remove $i } } on-error={}');
-  P('      :do { /container/add remote-image=$cimg interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes dns=1.1.1.1,8.8.8.8 } on-error={ /container/add remote-image=$cimg interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes }');
-  P('      :local w 0');
-  P('      :set st ""');
-  P('      :while ($w < 300) do={ :delay 15s ; :set w ($w + 15) ; :do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={ :set st "" } ; :put ("    статус: $st, $w сек") ; :if (($st = "stopped") or ($st = "running") or ($st = "error")) do={ :set w 300 } }');
-  P('      :if (($st = "stopped") or ($st = "running")) do={ :set done true } else={ :put ("  попытка $att не удалась (статус: $st)") ; :delay 15s }');
-  P('    }');
-  P('  }');
-  P('  :if (!$done) do={');
-  P('    :put "!! Docker Hub недоступен после 3 попыток, а локального образа рядом нет."');
-  P('    :put "   Как поставить из файла (получить образ там, где Docker Hub открыт - ПК с podman/docker или зарубежный VPS):"');
-  P('    :put ("     podman pull --arch=" . $parch . " docker.io/" . $cimg . ":latest")');
-  P('    :put ("     podman save docker.io/" . $cimg . ":latest -o vless-container-" . $arch . ".tar")');
-  P('    :put "   Залейте .tar в Files роутера (Winbox -> Files) и запустите скрипт снова - он поставит из файла."');
-  P('    :put "   В авто-режиме проще: положите vless-container-<арх>.tar рядом с setup.ps1/setup.sh - установщик сам зальёт и доустановит."');
-  P('  }');
+  if(isReality){
+    // Reality-ключ: оригинальный образ есть в Docker Hub — 3 попытки
+    P('  :put "Локального образа нет - качаю оригинальный образ с Docker Hub (до 3 попыток)..."');
+    P('  :local done false');
+    P('  :for att from=1 to=3 do={');
+    P('    :if (!$done) do={');
+    P('      :put ("  === попытка $att из 3 ===")');
+    P('      :do { :foreach i in=[/container/find where root-dir=$rootDir] do={ :do { /container/stop $i ; :delay 2s } on-error={} ; /container/remove $i } } on-error={}');
+    P('      :do { /container/add remote-image=$cimg interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes dns=1.1.1.1,8.8.8.8 } on-error={ /container/add remote-image=$cimg interface=$vethName envlist="vless" root-dir=$rootDir start-on-boot=yes logging=yes }');
+    P('      :local w 0');
+    P('      :set st ""');
+    P('      :while ($w < 300) do={ :delay 15s ; :set w ($w + 15) ; :do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={ :set st "" } ; :put ("    статус: $st, $w сек") ; :if (($st = "stopped") or ($st = "running") or ($st = "error")) do={ :set w 300 } }');
+    P('      :if (($st = "stopped") or ($st = "running")) do={ :set done true } else={ :put ("  попытка $att не удалась (статус: $st)") ; :delay 15s }');
+    P('    }');
+    P('  }');
+    P('  :if (!$done) do={');
+    P('    :put "!! Docker Hub недоступен после 3 попыток, а локального образа рядом нет."');
+    P('    :put "   Получить образ (ПК с podman/docker или зарубежный VPS):"');
+    P('    :put ("     podman pull --arch=" . $parch . " docker.io/" . $cimg . ":latest")');
+    P('    :put ("     podman save docker.io/" . $cimg . ":latest -o vless-container-" . $arch . ".tar")');
+    P('    :put "   Залейте .tar в Files роутера и запустите скрипт снова."');
+    P('  }');
+  } else {
+    // TLS-ключ: в Docker Hub только Reality-версия — она НЕ подойдёт. Нужен патченный образ.
+    P('  :put "!! Локального образа нет, а ключ - TLS."');
+    P('  :put "   Docker Hub НЕ подходит: там только Reality-версия образа, с TLS-ключом она падает (invalid public_key)."');
+    P('   :put "   Нужен образ С ПОДДЕРЖКОЙ TLS (vless-container-tls-<арх>.tar)."');
+    P('   :put "   В авто-режиме (setup.ps1/setup.sh) он подтягивается с GitHub автоматически."');
+    P('   :put "   Вручную: скачайте vless-container-tls-<арх>.tar с GitHub автора и залейте в Files роутера, затем запустите скрипт снова."');
+  }
   P('}');
   P(':do { :set st [/container/get [/container/find where root-dir=$rootDir] status] } on-error={ :set st "" }');
   P(':if ($st = "stopped") do={');
@@ -983,8 +1024,8 @@ function generate(){
   const ps1Wrap = el('ps1Wrap');
   const manualWrap = el('manualWrap');
   if(imode === 'auto'){
-    lastPs1 = buildPs1({rIp, rUser, doBackup, tarName: tarNameRaw, tarUrl: tarUrlRaw});
-    lastSh = buildSh({rIp, rUser, doBackup, tarName: tarNameRaw, tarUrl: tarUrlRaw});
+    lastPs1 = buildPs1({rIp, rUser, doBackup, tarName: tarNameRaw, tarUrl: tarUrlRaw, infix: imgInfix, isReality});
+    lastSh = buildSh({rIp, rUser, doBackup, tarName: tarNameRaw, tarUrl: tarUrlRaw, infix: imgInfix, isReality});
     el('ps1Out').textContent = lastPs1;
     el('shOut').textContent = lastSh;
     el('dlPs1').style.borderColor = isWin ? 'var(--accent)' : '';
@@ -1023,6 +1064,7 @@ function buildPs1(o){
   A('$RscName  = "vless-setup.rsc"');
   A('$DoBackup = ' + (o.doBackup ? '$true' : '$false'));
   A('$TarName  = "' + (o.tarName || '') + '"   # имя запасного .tar рядом со скриптом (пусто = стандартное)');
+  A('$Infix    = "' + (o.infix || '') + '"   # "" для Reality-ключа, "tls-" для TLS/подписки (образ с поддержкой TLS)');
   A('$TarUrl   = "' + (o.tarUrl || '') + '"    # ссылка на .tar (пусто = не качать по ссылке)');
   A('$Image    = "wiktorbgu/vless-sing-box-tunnel-mikrotik"');
   A('$here = Split-Path -Parent $MyInvocation.MyCommand.Path');
@@ -1194,14 +1236,14 @@ function buildPs1(o){
   A('  if ($arch -eq "x86_64" -or $arch -eq "x86") { $aliases += @("amd64","x86_64","x86") }');
   A('  $cand = @()');
   A('  if ($TarName) { $cand += (Join-Path $here $TarName) }');
-  A('  foreach($a in $aliases){ $cand += (Join-Path $here ("vless-container-" + $a + ".tar")) }');
+  A('  foreach($a in $aliases){ $cand += (Join-Path $here ("vless-container-" + $Infix + $a + ".tar")) }');
   A('  $cand += (Join-Path $here "vless-container.tar")');
   A('  foreach($c in $cand){ if (Test-Path $c) { $tar = $c; break } }');
   A('  if (-not $tar -and $TarUrl) {');
   A('    # {arch} в ссылке подставляется автоматически - один линк работает для всех моделей');
   A('    $url = $TarUrl.Replace("{arch}", $arch)');
   A('    Write-Host "Скачиваю образ по ссылке: $url" -ForegroundColor Cyan');
-  A('    $tt = Join-Path $here ("vless-container-" + $arch + ".tar")');
+  A('    $tt = Join-Path $here ("vless-container-" + $Infix + $arch + ".tar")');
   A('    try { Invoke-WebRequest -Uri $url -OutFile $tt -UseBasicParsing; $tar = $tt } catch { Write-Host "не удалось скачать по ссылке" -ForegroundColor Yellow }');
   A('  }');
   A('  if (-not $tar) {');
@@ -1210,7 +1252,7 @@ function buildPs1(o){
   A('    elseif (Get-Command docker -ErrorAction SilentlyContinue) { $eng = "docker" }');
   A('    if ($eng) {');
   A('      $parch = $arch; if ($arch -eq "x86" -or $arch -eq "x86_64") { $parch = "amd64" }');
-  A('      $tt = Join-Path $here ("vless-container-" + $arch + ".tar")');
+  A('      $tt = Join-Path $here ("vless-container-" + $Infix + $arch + ".tar")');
   A('      Write-Host "Собираю образ через $eng (--arch=$parch), это разово..." -ForegroundColor Cyan');
   A('      try {');
   A('        if ($eng -eq "podman") { & podman pull --arch=$parch ("docker.io/" + $Image + ":latest"); & podman save ("docker.io/" + $Image + ":latest") -o $tt }');
@@ -1267,6 +1309,7 @@ function buildSh(o){
   A('RscName="vless-setup.rsc"');
   A('DoBackup=' + (o.doBackup ? '1' : '0'));
   A('TarName="' + (o.tarName || '') + '"   # имя запасного .tar рядом со скриптом (пусто = стандартное)');
+  A('Infix="' + (o.infix || '') + '"   # "" для Reality, "tls-" для TLS/подписки');
   A('TarUrl="' + (o.tarUrl || '') + '"     # ссылка на .tar (пусто = не качать по ссылке)');
   A('Image="wiktorbgu/vless-sing-box-tunnel-mikrotik"');
   A('here="$(cd "$(dirname "$0")" && pwd)"');
@@ -1429,14 +1472,14 @@ function buildSh(o){
   A('  aliases="$arch"');
   A('  [ "$arch" = "arm" ] && aliases="$aliases armv7"');
   A('  { [ "$arch" = "x86_64" ] || [ "$arch" = "x86" ]; } && aliases="$aliases amd64 x86_64 x86"');
-  A('  for c in "$TarName" $(for a in $aliases; do echo "vless-container-$a.tar"; done) "vless-container.tar"; do');
+  A('  for c in "$TarName" $(for a in $aliases; do echo "vless-container-${Infix}$a.tar"; done) "vless-container.tar"; do');
   A('    [ -n "$c" ] || continue');
   A('    if [ -f "$here/$c" ]; then tar="$here/$c"; break; fi');
   A('  done');
   A('  if [ -z "$tar" ] && [ -n "$TarUrl" ]; then');
   A('    url="${TarUrl//\\{arch\\}/$arch}"   # {arch} подставляется - один линк на все модели');
   A('    echo "Скачиваю образ по ссылке: $url"');
-  A('    if curl -fLo "$here/vless-container-$arch.tar" "$url"; then tar="$here/vless-container-$arch.tar"; else warn "не удалось скачать по ссылке"; fi');
+  A('    if curl -fLo "$here/vless-container-${Infix}$arch.tar" "$url"; then tar="$here/vless-container-${Infix}$arch.tar"; else warn "не удалось скачать по ссылке"; fi');
   A('  fi');
   A('  if [ -z "$tar" ]; then');
   A('    eng=""');
@@ -1444,7 +1487,7 @@ function buildSh(o){
   A('    [ -z "$eng" ] && command -v docker >/dev/null 2>&1 && eng="docker"');
   A('    if [ -n "$eng" ]; then');
   A('      parch="$arch"; { [ "$arch" = "x86" ] || [ "$arch" = "x86_64" ]; } && parch="amd64"');
-  A('      tt="$here/vless-container-$arch.tar"');
+  A('      tt="$here/vless-container-${Infix}$arch.tar"');
   A('      echo "Собираю образ через $eng (--arch=$parch), это разово..."');
   A('      if [ "$eng" = "podman" ]; then');
   A('        podman pull --arch="$parch" "docker.io/$Image:latest" && podman save "docker.io/$Image:latest" -o "$tt" && tar="$tt"');
