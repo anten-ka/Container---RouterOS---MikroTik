@@ -1,0 +1,359 @@
+{
+  "schema": 1,
+  "created": "2026-07-09T00:00:00.000Z",
+  "singBoxVersion": "1.13.12",
+  "sourceCommit": "1086ab2563320e0da0c23b3a491d8dfa0939dff4",
+  "sourceArchiveSha256": "8b0d61adec28a16dbc3fc346bb82ab36fd64b879c9531be5e82c6b2af7582649",
+  "goVersion": "1.26.5",
+  "goArchiveSha256": "efb87ff28af9a188d0536ef5d42e63dd52ba8263cd7344a993cc48dd11dedb6a",
+  "buildTags": "with_utls,badlinkname,tfogo_checklinkname0",
+  "alpineRelease": "3.22.5",
+  "alpineRepository": "https://dl-cdn.alpinelinux.org/alpine/v3.22/main",
+  "buildScriptSha256": "dcdaafda8f81f106ffe726851468827849380b5792751105607611f63b51016f",
+  "singBoxLicenseSha256": "650d5e3b99a446fb38e820fa87a49562e0c79eab868fff58618ac487a58e554c",
+  "basePolicy": "From-scratch reproducible runtime assembled only from digest-pinned upstream inputs.",
+  "images": [
+    {
+      "file": "vless-routeros-1.13.12-arm64.tar",
+      "sha256": "01da0be658cce83701b8635da58bcfc794eb0d610b291c76de8707bf120b7d65",
+      "bytes": 28316160,
+      "layerSha256": "3b699e556a7ee0162d44501cad3aee779eeaeec786d037355e75db3853a3b944",
+      "layerCount": 1,
+      "historyCount": 1,
+      "binarySha256": "9b7199ef0d31bc7442388db5b9bf4e296aea9cb3ae28c8e7e405c32006b79a1c",
+      "binaryBytes": 23789694,
+      "buildTags": "with_utls,badlinkname,tfogo_checklinkname0",
+      "sourceCommit": "1086ab2563320e0da0c23b3a491d8dfa0939dff4",
+      "sourceSha256": "8b0d61adec28a16dbc3fc346bb82ab36fd64b879c9531be5e82c6b2af7582649",
+      "goVersion": "1.26.5",
+      "goArch": "arm64",
+      "goArm": null,
+      "dockerArch": "arm64",
+      "binaryFileInfo": "ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped",
+      "entrypointSha256": "f5e937c529603fea2aee113a315d81a4ddf4892140fbeaaabd85da933226107f",
+      "runtimeSbomSha256": "f823ff6f8bedc553861f02e40a2466868682cb0503a020b8f203a90e4dac5191",
+      "elfCount": 17,
+      "alpineRelease": "3.22.5",
+      "alpinePackages": [
+        {
+          "name": "busybox",
+          "version": "1.37.0-r20",
+          "sha256": "9d25af67564c92a4a4c603462efdbcd23019e90b8785f1ebcad640cbb1551c93",
+          "filename": "busybox-1.37.0-r20.apk"
+        },
+        {
+          "name": "busybox-binsh",
+          "version": "1.37.0-r20",
+          "sha256": "9180dcee3f67ea806fe45361cffab94f8ce7e417d5f373bb0d989e88eb609903",
+          "filename": "busybox-binsh-1.37.0-r20.apk"
+        },
+        {
+          "name": "ca-certificates-bundle",
+          "version": "20260611-r0",
+          "sha256": "ae45c92eba28db3434058980c40930d3653663e5251cb04c9fd49a94ca00c93b",
+          "filename": "ca-certificates-bundle-20260611-r0.apk"
+        },
+        {
+          "name": "iproute2-minimal",
+          "version": "6.15.0-r0",
+          "sha256": "ce97b56e3fc4f0e9a38fdd82f94eb44bfa24d60be62dfee997b74b0f0b9cc75d",
+          "filename": "iproute2-minimal-6.15.0-r0.apk"
+        },
+        {
+          "name": "iptables",
+          "version": "1.8.11-r1",
+          "sha256": "0a10fe634e3525082a1219487cd044d987ac4a55ed5aa551bf758e81223e1cfb",
+          "filename": "iptables-1.8.11-r1.apk"
+        },
+        {
+          "name": "iptables-legacy",
+          "version": "1.8.11-r1",
+          "sha256": "8beced6a354697e50014e2cebe0dcea3dc65d2dbbb708006a149999b3b029919",
+          "filename": "iptables-legacy-1.8.11-r1.apk"
+        },
+        {
+          "name": "libcap2",
+          "version": "2.78-r0",
+          "sha256": "de209aee8b76946849bff6bd97151c6af20889be5a96a2e28f9899255e252e3f",
+          "filename": "libcap2-2.78-r0.apk"
+        },
+        {
+          "name": "libelf",
+          "version": "0.193-r0",
+          "sha256": "cbc2cbd52e27a381f17892392417fecfbeaba354479d3acd923cf57967d1b25a",
+          "filename": "libelf-0.193-r0.apk"
+        },
+        {
+          "name": "libip4tc",
+          "version": "1.8.11-r1",
+          "sha256": "6418c50ff5287f6aca02ba7d8baab7cfe729a898793c9a8856cf8975b3f759c2",
+          "filename": "libip4tc-1.8.11-r1.apk"
+        },
+        {
+          "name": "libip6tc",
+          "version": "1.8.11-r1",
+          "sha256": "48ec17436d0e6fd754c8eb50862b5604e86e80ac7d19d7c7a48f9f622f305306",
+          "filename": "libip6tc-1.8.11-r1.apk"
+        },
+        {
+          "name": "libmnl",
+          "version": "1.0.5-r2",
+          "sha256": "213a7e87553bed3d9159b2e74d2627885c259883e61714b357949ca806eb1f8d",
+          "filename": "libmnl-1.0.5-r2.apk"
+        },
+        {
+          "name": "libxtables",
+          "version": "1.8.11-r1",
+          "sha256": "e84f0d6b69d4318f297056d00ccbe433e6c7d163fe6767405e373248c42e3e88",
+          "filename": "libxtables-1.8.11-r1.apk"
+        },
+        {
+          "name": "musl",
+          "version": "1.2.5-r12",
+          "sha256": "ac281d1e7f9e9c447c51e309317b975f48be6edaf3ab91ae73b959cf86703782",
+          "filename": "musl-1.2.5-r12.apk"
+        },
+        {
+          "name": "zlib",
+          "version": "1.3.2-r0",
+          "sha256": "7a39a917e4dab3c7a45537210ee5b5f17bf75f5e7777809a20cddd0afe074187",
+          "filename": "zlib-1.3.2-r0.apk"
+        },
+        {
+          "name": "zstd-libs",
+          "version": "1.5.7-r0",
+          "sha256": "a0e92d2225941a514eb0b2325b137fe6444ef9171627aae8129b74a6ad934ac4",
+          "filename": "zstd-libs-1.5.7-r0.apk"
+        }
+      ]
+    },
+    {
+      "file": "vless-routeros-1.13.12-arm.tar",
+      "sha256": "53de888e15a2880a2bb5a4928f8689d3925fa4d2e17f09b1fca45aa8f4441014",
+      "bytes": 26748928,
+      "layerSha256": "1075c073939f36c4f4d3df7c86da79e775a832c0662bbb4bb0e5988138f1e926",
+      "layerCount": 1,
+      "historyCount": 1,
+      "binarySha256": "f93962c46dcf515a84495e6b56174d5bc87f2565053ca76c188230ef619defe2",
+      "binaryBytes": 23658622,
+      "buildTags": "with_utls,badlinkname,tfogo_checklinkname0",
+      "sourceCommit": "1086ab2563320e0da0c23b3a491d8dfa0939dff4",
+      "sourceSha256": "8b0d61adec28a16dbc3fc346bb82ab36fd64b879c9531be5e82c6b2af7582649",
+      "goVersion": "1.26.5",
+      "goArch": "arm",
+      "goArm": "7",
+      "dockerArch": "arm",
+      "binaryFileInfo": "ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, stripped",
+      "entrypointSha256": "f5e937c529603fea2aee113a315d81a4ddf4892140fbeaaabd85da933226107f",
+      "runtimeSbomSha256": "01eb09bf9ed52d1ec9d658f8fa24dd27e33fd713b852a0045ba923260993d4db",
+      "elfCount": 17,
+      "alpineRelease": "3.22.5",
+      "alpinePackages": [
+        {
+          "name": "busybox",
+          "version": "1.37.0-r20",
+          "sha256": "3e3cd31e1167879c2c64bd1f10676242a34af2c7ab05645c0fe41cc12637b875",
+          "filename": "busybox-1.37.0-r20.apk"
+        },
+        {
+          "name": "busybox-binsh",
+          "version": "1.37.0-r20",
+          "sha256": "5b6a175835dce1b12c98b58463e4fe1efdbdebf3de411bcd42688888c2266b14",
+          "filename": "busybox-binsh-1.37.0-r20.apk"
+        },
+        {
+          "name": "ca-certificates-bundle",
+          "version": "20260611-r0",
+          "sha256": "60d8e2e39855a57f1201006b8a618cd463258db52ecfd6722674534f57c79e4a",
+          "filename": "ca-certificates-bundle-20260611-r0.apk"
+        },
+        {
+          "name": "iproute2-minimal",
+          "version": "6.15.0-r0",
+          "sha256": "af60e08ee582ccfe45a75b72d21927f108b30daa8a7e8ceee118f28acf8c387b",
+          "filename": "iproute2-minimal-6.15.0-r0.apk"
+        },
+        {
+          "name": "iptables",
+          "version": "1.8.11-r1",
+          "sha256": "76f87f183595bcd5c5a328a1982d012b1e3be504bdeea72466c2be384f6ec9d4",
+          "filename": "iptables-1.8.11-r1.apk"
+        },
+        {
+          "name": "iptables-legacy",
+          "version": "1.8.11-r1",
+          "sha256": "8d9563ec504b5f30b30c462f8e13747800c4d967d22ca513480896114e816078",
+          "filename": "iptables-legacy-1.8.11-r1.apk"
+        },
+        {
+          "name": "libcap2",
+          "version": "2.78-r0",
+          "sha256": "25647748b846824e5f3768e0cf9bedab1742301cdaf88de08d806cb0c2424737",
+          "filename": "libcap2-2.78-r0.apk"
+        },
+        {
+          "name": "libelf",
+          "version": "0.193-r0",
+          "sha256": "4a58d0872c0ea089f8176ed5ea792712a34c9d9a4c04d257e7695945fbe8e629",
+          "filename": "libelf-0.193-r0.apk"
+        },
+        {
+          "name": "libip4tc",
+          "version": "1.8.11-r1",
+          "sha256": "c3c1eca09995fa750a3da69c025542ff9c893acfb9ac886bc98839f144c67b40",
+          "filename": "libip4tc-1.8.11-r1.apk"
+        },
+        {
+          "name": "libip6tc",
+          "version": "1.8.11-r1",
+          "sha256": "13486e0a9c4fd7f97b0ce96b7c6306a2a6abd6bd574ef57be8aa0ec3639f40ea",
+          "filename": "libip6tc-1.8.11-r1.apk"
+        },
+        {
+          "name": "libmnl",
+          "version": "1.0.5-r2",
+          "sha256": "c47b6ce56ed23d0a738f1db78551e1917f689ea01c8b4b00ec338ff8c7948db4",
+          "filename": "libmnl-1.0.5-r2.apk"
+        },
+        {
+          "name": "libxtables",
+          "version": "1.8.11-r1",
+          "sha256": "6b852daca511e5c6e079e134a3cb6b2f5591051dca05a7c9562e486aad9e9a80",
+          "filename": "libxtables-1.8.11-r1.apk"
+        },
+        {
+          "name": "musl",
+          "version": "1.2.5-r12",
+          "sha256": "28f1755c96ea4edc5e7c9feca84e47ab1659c7aedc755c670494aadbd569c8c9",
+          "filename": "musl-1.2.5-r12.apk"
+        },
+        {
+          "name": "zlib",
+          "version": "1.3.2-r0",
+          "sha256": "f53281803a3ba31b97d900875587b0d793bb1b0f3c37d6b00a522e3544d81de0",
+          "filename": "zlib-1.3.2-r0.apk"
+        },
+        {
+          "name": "zstd-libs",
+          "version": "1.5.7-r0",
+          "sha256": "739d12b00c10623f92b5212066b98a89090a788df36095bac58256c763c54b03",
+          "filename": "zstd-libs-1.5.7-r0.apk"
+        }
+      ]
+    },
+    {
+      "file": "vless-routeros-1.13.12-x86_64.tar",
+      "sha256": "beca5e47ef4f131c88d16e44a0ddddddffbd60afb1a216ebc7860800d1cfdc24",
+      "bytes": 29513728,
+      "layerSha256": "d8b0bdadf2e134021c18338ec9b0e02f76ed2f3d3800706b9ebb56fbb3abda01",
+      "layerCount": 1,
+      "historyCount": 1,
+      "binarySha256": "da5f543a8f2476e175ed0984d4ee854231ecedb97f8aaca64176151e530ca30a",
+      "binaryBytes": 25669758,
+      "buildTags": "with_utls,badlinkname,tfogo_checklinkname0",
+      "sourceCommit": "1086ab2563320e0da0c23b3a491d8dfa0939dff4",
+      "sourceSha256": "8b0d61adec28a16dbc3fc346bb82ab36fd64b879c9531be5e82c6b2af7582649",
+      "goVersion": "1.26.5",
+      "goArch": "amd64",
+      "goArm": null,
+      "dockerArch": "amd64",
+      "binaryFileInfo": "ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, stripped",
+      "entrypointSha256": "f5e937c529603fea2aee113a315d81a4ddf4892140fbeaaabd85da933226107f",
+      "runtimeSbomSha256": "de71f8ee055cf17152a3b8e5d149f0845ed1964ab7e568fb02ec0ba3e726522b",
+      "elfCount": 17,
+      "alpineRelease": "3.22.5",
+      "alpinePackages": [
+        {
+          "name": "busybox",
+          "version": "1.37.0-r20",
+          "sha256": "7cc34c2dda2520b456ab4a55abc37fe245ac90f98ab9f1c7a9be3aec035df48e",
+          "filename": "busybox-1.37.0-r20.apk"
+        },
+        {
+          "name": "busybox-binsh",
+          "version": "1.37.0-r20",
+          "sha256": "ad33d8d799ed80eab45bb68d63c14062165d3653f4fb52e73959cd31d032210e",
+          "filename": "busybox-binsh-1.37.0-r20.apk"
+        },
+        {
+          "name": "ca-certificates-bundle",
+          "version": "20260611-r0",
+          "sha256": "a18fd1bd8bea03966ee5719aa61e44d9a810db2c8b6641b45f92b30e860f0927",
+          "filename": "ca-certificates-bundle-20260611-r0.apk"
+        },
+        {
+          "name": "iproute2-minimal",
+          "version": "6.15.0-r0",
+          "sha256": "fb761fe0df9d23926d20d9ef5d5ca3a6ba08338b16ce26beb02305eba5733382",
+          "filename": "iproute2-minimal-6.15.0-r0.apk"
+        },
+        {
+          "name": "iptables",
+          "version": "1.8.11-r1",
+          "sha256": "defe876173d08fe30b664b2d9f60d0237298a639e3a7d0e3f83ac637fd6519db",
+          "filename": "iptables-1.8.11-r1.apk"
+        },
+        {
+          "name": "iptables-legacy",
+          "version": "1.8.11-r1",
+          "sha256": "aebfc932aa2e3b27e4895250aa4b73ead107116a3e8cd33ebf2d4036e46c043e",
+          "filename": "iptables-legacy-1.8.11-r1.apk"
+        },
+        {
+          "name": "libcap2",
+          "version": "2.78-r0",
+          "sha256": "9850759bbb16f1ff6d1a49dc99947ef1401e1c10e5ca24f8380e69ba19f077c9",
+          "filename": "libcap2-2.78-r0.apk"
+        },
+        {
+          "name": "libelf",
+          "version": "0.193-r0",
+          "sha256": "b8df03bd86f172aa1741790592056e6d6588247ddf6473920fa32cd7cc681f6a",
+          "filename": "libelf-0.193-r0.apk"
+        },
+        {
+          "name": "libip4tc",
+          "version": "1.8.11-r1",
+          "sha256": "3ca5cd36732d59374d970d937f781469969bf668ff5eb65207892f7cfcd27f02",
+          "filename": "libip4tc-1.8.11-r1.apk"
+        },
+        {
+          "name": "libip6tc",
+          "version": "1.8.11-r1",
+          "sha256": "dc0e2aa34b2454bce4c8f6860484925fd6e5bea8eeb24e53d4b9526a24ed4c2c",
+          "filename": "libip6tc-1.8.11-r1.apk"
+        },
+        {
+          "name": "libmnl",
+          "version": "1.0.5-r2",
+          "sha256": "e9dc63c95a0c8a263dc7f0705e6f7a2220d632a675ce85db798d33a40b1c1b0b",
+          "filename": "libmnl-1.0.5-r2.apk"
+        },
+        {
+          "name": "libxtables",
+          "version": "1.8.11-r1",
+          "sha256": "5367f1f5c309a0aeede0a08d73af717f582f7a135ff97080aa0e5b7c72fd97af",
+          "filename": "libxtables-1.8.11-r1.apk"
+        },
+        {
+          "name": "musl",
+          "version": "1.2.5-r12",
+          "sha256": "4990a5e0ba312e478f94cfe431a70efef1538004eb361c8ae424516848be45bb",
+          "filename": "musl-1.2.5-r12.apk"
+        },
+        {
+          "name": "zlib",
+          "version": "1.3.2-r0",
+          "sha256": "1f3d5f463f490dad3a68097376711bfe5e8156e9e8daff3070513aa4378cdeca",
+          "filename": "zlib-1.3.2-r0.apk"
+        },
+        {
+          "name": "zstd-libs",
+          "version": "1.5.7-r0",
+          "sha256": "1bdd6e57cfbfbfd6e8481cad37ddd5d199950715bec1879b3afb600272dbb09e",
+          "filename": "zstd-libs-1.5.7-r0.apk"
+        }
+      ]
+    }
+  ]
+}
